@@ -1,7 +1,7 @@
 {
-  "name": "@agentdb/sdk",
+  "name": "@x404-r/sdk",
   "version": "0.1.0",
-  "description": "Database-native infrastructure for crash-proof AI agents",
+  "description": "The runtime where context is never lost - crash-proof AI agents on CockroachDB",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",

@@ -1,29 +1,37 @@
-# @agentdb/sdk
+# @x404-r/sdk
+
+**The runtime where context is never lost.**
 
 Database-native infrastructure for crash-proof AI agents. Built on CockroachDB for distributed, fault-tolerant agent execution.
 
 ## Installation
 
 ```bash
-npm install @agentdb/sdk
+npm install @x404-r/sdk
 ```
+
+## Why x404-r?
+
+Long-running AI agents lose context when workers crash. Hours of progress? **404 Not Found.**
+
+x404-r fixes this. State lives in CockroachDB, not memory. Workers are stateless. Kill one, another picks up exactly where it left off.
 
 ## Features
 
-- **Crash-Proof Execution**: Checkpoint state at any point. Resume exactly where you left off after crashes.
-- **DAG Workflows**: Define complex workflows with step dependencies. Tasks execute in parallel when possible.
-- **Priority Scheduling**: Enterprise tenants get priority. `FOR UPDATE SKIP LOCKED` ensures atomic task claiming.
-- **AI Integration**: Built-in support for Gemini, OpenAI, and Anthropic with structured JSON output.
-- **Memory & Learning**: Store embeddings of past executions. Query similar memories for context.
-- **Multi-Tenant**: Full tenant isolation with usage tracking and rate limiting.
+- **Crash-Proof Execution**: Checkpoint state at any point. Resume exactly where you left off.
+- **DAG Workflows**: Define complex workflows with step dependencies. Parallel execution when possible.
+- **Priority Scheduling**: Enterprise tenants processed first via `FOR UPDATE SKIP LOCKED`.
+- **AI Integration**: Built-in support for Gemini, OpenAI, and Anthropic.
+- **Memory & Learning**: Query embeddings of past executions for context.
+- **Multi-Tenant**: Full tenant isolation with usage tracking.
 
 ## Quick Start
 
 ```typescript
-import { AgentDB } from '@agentdb/sdk';
+import { x404r } from '@x404-r/sdk';
 
-// Initialize (note: call .ready() to wait for async AI provider setup)
-const agent = await new AgentDB({
+// Initialize the runtime
+const runtime = await new x404r({
   connectionString: process.env.DATABASE_URL,
   ai: {
     provider: 'gemini',
@@ -32,119 +40,100 @@ const agent = await new AgentDB({
   debug: true,
 }).ready();
 
-// Define a workflow
-const myWorkflow = agent.workflow('my-workflow', {
+// Define a crash-proof workflow
+const myWorkflow = runtime.workflow('my-workflow', {
   steps: [
     {
-      name: 'step-1',
+      name: 'process',
       handler: async (ctx) => {
-        // Use AI
-        const result = await ctx.ai.generate('Analyze this data...');
+        // Resume from checkpoint if crashed
+        let progress = ctx.state.progress || 0;
 
-        // Checkpoint (crash-proof!)
-        await ctx.checkpoint({ result });
+        for (let i = progress; i < 100; i++) {
+          await doWork(i);
 
-        return { result };
-      },
-    },
-    {
-      name: 'step-2',
-      dependsOn: ['step-1'], // Runs after step-1 completes
-      handler: async (ctx) => {
-        // Access previous checkpoint state via ctx.state
+          // Checkpoint - survives any crash!
+          await ctx.checkpoint({ progress: i + 1 });
+        }
+
         return { done: true };
       },
     },
   ],
 });
 
-// Start a worker
-const worker = agent.worker({ concurrency: 5 });
+// Start workers
+const worker = runtime.worker({ concurrency: 5 });
 worker.register(myWorkflow);
 await worker.start();
 
 // Run workflows
-const result = await myWorkflow.run(
-  { input: 'data' },
-  { wait: true, timeout: 60000 }
-);
+const result = await myWorkflow.run({ input: 'data' }, { wait: true });
 ```
 
 ## Core Concepts
 
-### Workflows
-
-Workflows define a DAG of steps. Each step has a handler function and optional dependencies.
+### Checkpoints = Context Saved
 
 ```typescript
-const workflow = agent.workflow('name', {
-  version: '1.0.0',
+handler: async (ctx) => {
+  for (const item of items) {
+    await processItem(item);
+
+    // Saved to CockroachDB - crash-proof!
+    await ctx.checkpoint({ lastItem: item });
+  }
+}
+```
+
+If the worker crashes after checkpoint, the next worker resumes from `ctx.state.lastItem`.
+
+### DAG Workflows
+
+```typescript
+const workflow = runtime.workflow('pipeline', {
   steps: [
-    { name: 'a', handler: async (ctx) => ({ data: 'a' }) },
-    { name: 'b', handler: async (ctx) => ({ data: 'b' }) },
-    { name: 'c', dependsOn: ['a', 'b'], handler: async (ctx) => ({ data: 'c' }) },
+    { name: 'a', handler: async (ctx) => ({ result: 'a' }) },
+    { name: 'b', handler: async (ctx) => ({ result: 'b' }) },
+    { name: 'c', dependsOn: ['a', 'b'], handler: async (ctx) => ({ result: 'c' }) },
   ],
 });
 ```
 
-Steps `a` and `b` run in parallel, then `c` runs after both complete.
-
-### Checkpoints
-
-Checkpoints save state to CockroachDB. If a worker crashes, the task resumes from the last checkpoint.
-
-```typescript
-handler: async (ctx) => {
-  const items = ctx.input.items;
-  let processed = ctx.state.processed || 0; // Resume from checkpoint
-
-  for (let i = processed; i < items.length; i++) {
-    await processItem(items[i]);
-    await ctx.checkpoint({ processed: i + 1 }); // Saved to DB
-  }
-
-  return { total: items.length };
-}
-```
+Steps `a` and `b` run in parallel. Step `c` waits for both.
 
 ### Workers
 
-Workers claim and execute tasks. Multiple workers can run in parallel for horizontal scaling.
-
 ```typescript
-const worker = agent.worker({
-  concurrency: 5,       // Max concurrent tasks
-  pollInterval: 1000,   // Poll every 1s
+const worker = runtime.worker({
+  concurrency: 5,           // Max concurrent tasks
+  pollInterval: 1000,       // Poll every 1s
   heartbeatInterval: 10000, // Heartbeat every 10s
-  taskTypes: ['step-1'], // Optional: only handle specific steps
+  taskTypes: ['process'],   // Optional: filter by step name
 });
 
 worker.register(workflow1);
 worker.register(workflow2);
 
 await worker.start();
-
-// Graceful shutdown
-await worker.stop();
+await worker.stop(); // Graceful shutdown
 ```
 
 ### AI Providers
 
-Built-in support for multiple AI providers:
-
 ```typescript
-// Gemini (default model: gemini-2.5-flash)
-const agent = await new AgentDB({
+// Gemini (default)
+const runtime = await new x404r({
   ai: { provider: 'gemini', apiKey: '...' },
 }).ready();
 
 // OpenAI (requires: npm install openai)
-const agent = await new AgentDB({
+const runtime = await new x404r({
   ai: { provider: 'openai', apiKey: '...', defaultModel: 'gpt-4-turbo' },
 }).ready();
 
 // Anthropic (requires: npm install @anthropic-ai/sdk)
-const agent = await new AgentDB({
+const runtime = await new x404r({
   ai: { provider: 'anthropic', apiKey: '...', defaultModel: 'claude-3-opus' },
 }).ready();
 ```
@@ -154,161 +143,146 @@ const agent = await new AgentDB({
 ```typescript
 handler: async (ctx) => {
   // Simple generation
-  const response = await ctx.ai.generate('Summarize this text...');
+  const response = await ctx.ai.generate('Analyze this...');
 
   // With system prompt
-  const analysis = await ctx.ai.generate('Analyze the code', {
-    systemPrompt: 'You are a senior code reviewer.',
+  const analysis = await ctx.ai.generate('Review the code', {
+    systemPrompt: 'You are a senior engineer.',
     temperature: 0.3,
-    maxTokens: 1000,
   });
 
-  // Structured JSON output
-  const data = await ctx.ai.generateJSON<{ name: string; age: number }>(
-    'Extract user info from: John is 25 years old'
-  );
+  // Structured JSON
+  const data = await ctx.ai.generateJSON<{ name: string }>('Extract name from...');
 
   return { response, analysis, data };
 }
 ```
 
-## CockroachDB Features Used
-
-| Feature | How AgentDB Uses It |
-|---------|---------------------|
-| `FOR UPDATE SKIP LOCKED` | Atomic task claiming without conflicts |
-| Transactions | Consistent state across checkpoints |
-| Multi-region | Deploy workers close to data |
-| JSON columns | Flexible input/output payloads |
-| Array columns | Step dependencies as UUID arrays |
-
 ## API Reference
 
-### AgentDB
+### x404r (Client)
 
 ```typescript
-const agent = new AgentDB(config: AgentDBConfig);
-await agent.ready(); // Wait for AI provider initialization
+const runtime = new x404r(config);
+await runtime.ready(); // Wait for AI provider init
 ```
 
 | Option | Type | Description |
 |--------|------|-------------|
-| connectionString | string | PostgreSQL/CockroachDB connection URL |
-| ai | AIConfig | AI provider configuration |
-| tenantId | string | Tenant ID for multi-tenant mode |
+| connectionString | string | CockroachDB connection URL |
+| ai | AIConfig | AI provider config |
+| tenantId | string | Tenant ID (multi-tenant mode) |
 | debug | boolean | Enable debug logging |
 
 Methods:
-- `workflow(name, definition)` - Create a workflow builder
-- `worker(config)` - Create a task worker
-- `on(handler)` - Register an event handler
-- `close()` - Close database connection
+- `workflow(name, definition)` - Create a workflow
+- `worker(config)` - Create a worker
+- `on(handler)` - Register event handler
+- `close()` - Close connection
 
 ### WorkflowBuilder
 
 ```typescript
-const workflow = agent.workflow<TInput, TOutput>(name, definition);
+const workflow = runtime.workflow<TInput, TOutput>(name, definition);
 ```
 
 Methods:
-- `run(input, options)` - Start a workflow execution
-- `name` - Get workflow name
-- `version` - Get workflow version
-- `steps` - Get step definitions
+- `run(input, options)` - Execute the workflow
+- `name` - Workflow name
+- `version` - Workflow version
 
 Run options:
 - `wait: boolean` - Wait for completion
-- `timeout: number` - Timeout in milliseconds
-- `priority: number` - Job priority (higher = first)
+- `timeout: number` - Timeout in ms
+- `priority: number` - Job priority
 
 ### Worker
 
 ```typescript
-const worker = agent.worker(config: WorkerConfig);
+const worker = runtime.worker(config);
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | concurrency | number | 5 | Max concurrent tasks |
-| pollInterval | number | 1000 | Polling interval (ms) |
+| pollInterval | number | 1000 | Poll interval (ms) |
 | heartbeatInterval | number | 10000 | Heartbeat interval (ms) |
-| taskTypes | string[] | [] | Task types to handle |
+| taskTypes | string[] | [] | Filter by step name |
 
 Methods:
 - `register(workflow)` - Register a workflow
-- `start()` - Start processing tasks
+- `start()` - Start processing
 - `stop()` - Graceful shutdown
-- `id` - Get worker ID
-- `isRunning` - Check if running
-- `activeTaskCount` - Get active task count
+- `id` - Worker ID
+- `isRunning` - Running status
+- `activeTaskCount` - Active tasks
 
 ### StepContext
 
-Available in step handlers:
+Available in handlers:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| input | TInput | Step input data |
-| state | object | Mutable state (persisted via checkpoint) |
-| workflow | object | Workflow metadata (id, name, input) |
-| task | object | Task metadata (id, name, attemptCount) |
-| ai | AIProvider | AI provider instance |
+| input | TInput | Step input |
+| state | object | Checkpoint state |
+| workflow | object | Workflow info |
+| task | object | Task info |
+| ai | AIProvider | AI provider |
 
 Methods:
-- `checkpoint(state?)` - Save checkpoint to database
-- `log(message, data?)` - Log with workflow/task prefix
-- `sleep(ms)` - Async sleep helper
+- `checkpoint(state?)` - Save checkpoint
+- `log(message, data?)` - Log with prefix
+- `sleep(ms)` - Async sleep
 
 ### Events
 
 ```typescript
-agent.on(async (event) => {
+runtime.on(async (event) => {
   switch (event.type) {
     case 'workflow:created':
-    case 'workflow:started':
     case 'workflow:completed':
     case 'workflow:failed':
-      console.log('Workflow:', event.workflow);
+      console.log(event.workflow);
       break;
     case 'task:started':
     case 'task:completed':
     case 'task:failed':
-      console.log('Task:', event.task);
+      console.log(event.task);
       break;
   }
 });
 ```
 
+## CockroachDB Features
+
+| Feature | Usage |
+|---------|-------|
+| `FOR UPDATE SKIP LOCKED` | Atomic task claiming |
+| Transactions | Consistent checkpoints |
+| Multi-region | Workers close to data |
+| JSON columns | Flexible payloads |
+
 ## Examples
 
-### Simple Workflow
-
 ```bash
+# Simple checkpoint demo
 npx tsx examples/simple-workflow.ts
-```
 
-Demonstrates basic checkpointing and crash recovery.
-
-### Code Review Agent
-
-```bash
+# AI code review agent
 npx tsx examples/code-review-agent.ts
 ```
-
-Full AI agent that reviews code for security issues.
 
 ## Environment Variables
 
 ```bash
-# Required
 DATABASE_URL=postgresql://user:pass@host:26257/db?sslmode=verify-full
-
-# AI Provider (at least one)
 GEMINI_API_KEY=your-gemini-key
-OPENAI_API_KEY=your-openai-key
-ANTHROPIC_API_KEY=your-anthropic-key
 ```
 
 ## License
 
 MIT
+
+---
+
+**x404-r** - Context is never lost.

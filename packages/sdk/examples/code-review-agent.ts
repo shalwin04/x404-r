@@ -1,19 +1,19 @@
 /**
  * Example: Code Review Agent
- * Demonstrates a crash-proof AI agent that reviews code changes
+ * A crash-proof AI agent that reviews code changes
  *
  * Run with: npx tsx examples/code-review-agent.ts
  */
 
-import { AgentDB } from '../src/index.js';
+import { x404r } from '../src/index.js';
 
-// Main execution
 async function main() {
-  console.log('Starting Code Review Agent\n');
+  console.log('x404-r Code Review Agent\n');
+  console.log('Context is never lost - AI reviews survive any crash!\n');
 
-  // Initialize the AgentDB client
-  const agent = await new AgentDB({
-    connectionString: process.env.DATABASE_URL || 'postgresql://localhost:26257/agentdb',
+  // Initialize the runtime
+  const runtime = await new x404r({
+    connectionString: process.env.DATABASE_URL || 'postgresql://localhost:26257/x404r',
     ai: {
       provider: 'gemini',
       apiKey: process.env.GEMINI_API_KEY!,
@@ -21,8 +21,8 @@ async function main() {
     debug: true,
   }).ready();
 
-  // Define a code review workflow
-  const codeReview = agent.workflow<
+  // Define a crash-proof code review workflow
+  const codeReview = runtime.workflow<
     { files: string[]; prTitle: string },
     { approved: boolean; comments: string[] }
   >('code-review', {
@@ -33,7 +33,6 @@ async function main() {
         handler: async (ctx) => {
           ctx.log('Analyzing code changes...');
 
-          // Use AI to analyze the changes
           const analysis = await ctx.ai.generate(
             'Analyze these code changes for a PR titled "' + ctx.input.prTitle + '":\n\n' +
               ctx.input.files.join('\n\n'),
@@ -43,7 +42,7 @@ async function main() {
             }
           );
 
-          // Checkpoint after analysis (crash-proof!)
+          // Checkpoint - crash-proof!
           await ctx.checkpoint({ analysis });
 
           return { analysis };
@@ -74,7 +73,6 @@ async function main() {
         handler: async (ctx) => {
           ctx.log('Generating final review...');
 
-          // Structured output with JSON schema
           const review = await ctx.ai.generate(
             'Based on the analysis, generate a final code review decision. Output JSON only.',
             {
@@ -82,7 +80,6 @@ async function main() {
             }
           );
 
-          // Parse JSON from response
           let result;
           try {
             const cleaned = review.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -100,20 +97,13 @@ async function main() {
     ],
   });
 
-  // Create a worker to process tasks
-  const worker = agent.worker({
-    concurrency: 3,
-    pollInterval: 1000,
-  });
-
-  // Register the workflow with the worker
+  // Start workers
+  const worker = runtime.worker({ concurrency: 3, pollInterval: 1000 });
   worker.register(codeReview);
-
-  // Start the worker (processes tasks in background)
   await worker.start();
   console.log('Worker started: ' + worker.id + '\n');
 
-  // Submit a code review job
+  // Submit a code review
   const result = await codeReview.run(
     {
       prTitle: 'Add user authentication',
@@ -128,11 +118,10 @@ async function main() {
   console.log('\nCode Review Result:');
   console.log(JSON.stringify(result, null, 2));
 
-  // Graceful shutdown
   await worker.stop();
-  await agent.close();
+  await runtime.close();
 
-  console.log('\nAgent completed');
+  console.log('\nx404-r - Context was never lost!');
 }
 
 main().catch(console.error);

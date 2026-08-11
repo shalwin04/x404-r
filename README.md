@@ -1,48 +1,52 @@
-# AgentDB
+# x404-r
 
-**Database-native infrastructure for crash-proof AI agents.** Built on CockroachDB for distributed, fault-tolerant agent execution.
+**The runtime where context is never lost.**
 
-> Transform CockroachDB into a runtime for AI agents. State lives in the database, not in memory. Workers can die anytime - agents resume exactly where they left off.
+> _404 - Not Found?_ Not anymore. x404-r ensures your AI agents never lose their place, even when workers crash mid-execution.
+
+x404-r is database-native infrastructure for crash-proof AI agents. Built on CockroachDB, it transforms your database into a durable runtime where agent state survives any failure.
+
+Transform CockroachDB into a runtime for AI agents. State lives in the database, not in memory. Workers can die anytime - agents resume exactly where they left off.
+
+## The Problem
+
+Long-running AI agents lose context when:
+
+- Workers crash mid-task
+- Memory limits are hit
+- Deployments restart
+- Network connections drop
+
+**Result:** Hours of work lost. Tasks restart from zero. Context = 404 Not Found.
+
+## The Solution: x404-r
+
+State lives in CockroachDB, not memory. Workers are stateless. Kill one, another picks up exactly where it left off.
+
+```
+Context? Always found. Progress? Never lost. Agents? Crash-proof.
+```
 
 ## Project Status
 
-| Component | Status | Description |
-|-----------|--------|-------------|
-| **Core SDK** | ✅ Complete | `@agentdb/sdk` - TypeScript SDK for building crash-proof agents |
-| **Database Schema** | ✅ Complete | Multi-tenant schema with checkpoints, memory vectors |
-| **Multi-Tenancy** | ✅ Complete | Tenant isolation, API key auth, usage tracking |
-| **AI Integration** | ✅ Complete | Gemini, OpenAI, Anthropic support |
-| **Dashboard** | ✅ Complete | React Flow visualization, admin panel |
-| **Worker System** | ✅ Complete | Task claiming, heartbeats, crash recovery |
-| **Priority Scheduling** | ✅ Complete | Enterprise > Team > Pro > Free tenant priority |
-| **AWS Deployment** | 🔧 Ready | CDK infrastructure (Lambda + CockroachDB) |
-| **GitHub OAuth** | 🔧 Ready | Session management, user auth |
-| **Stripe Billing** | ⏳ Planned | Usage-based billing integration |
-
-## What is AgentDB?
-
-AgentDB is infrastructure for AI agents that:
-
-1. **Never loses progress** - Checkpoint state to CockroachDB at any point
-2. **Survives crashes** - Workers resume from last checkpoint automatically
-3. **Scales horizontally** - Run 100s of workers, CockroachDB handles coordination
-4. **Learns from failures** - Vector memory stores past executions for context
-
-### Why CockroachDB?
-
-| Feature | How AgentDB Uses It |
-|---------|---------------------|
-| `FOR UPDATE SKIP LOCKED` | Atomic task claiming - no race conditions |
-| Multi-region | Deploy workers close to data |
-| Transactions | Consistent checkpoints across crashes |
-| JSON columns | Flexible agent state storage |
-| Horizontal scale | Handle millions of agent tasks |
+| Component               | Status      | Description                                           |
+| ----------------------- | ----------- | ----------------------------------------------------- |
+| **Core SDK**            | ✅ Complete | `@x404-r/sdk` - TypeScript SDK for crash-proof agents |
+| **Database Schema**     | ✅ Complete | Multi-tenant schema with checkpoints, memory vectors  |
+| **Multi-Tenancy**       | ✅ Complete | Tenant isolation, API key auth, usage tracking        |
+| **AI Integration**      | ✅ Complete | Gemini, OpenAI, Anthropic support                     |
+| **Dashboard**           | ✅ Complete | React Flow visualization, admin panel                 |
+| **Worker System**       | ✅ Complete | Task claiming, heartbeats, crash recovery             |
+| **Priority Scheduling** | ✅ Complete | Enterprise > Team > Pro > Free tenant priority        |
+| **AWS Deployment**      | 🔧 Ready    | CDK infrastructure (Lambda + CockroachDB)             |
+| **GitHub OAuth**        | 🔧 Ready    | Session management, user auth                         |
+| **Stripe Billing**      | ⏳ Planned  | Usage-based billing integration                       |
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         AgentDB Platform                         │
+│                        x404-r Runtime                            │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐    │
@@ -52,10 +56,10 @@ AgentDB is infrastructure for AI agents that:
 │         │                    │                    │             │
 │         ▼                    ▼                    ▼             │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │                    @agentdb/sdk                          │   │
+│  │                      @x404-r/sdk                         │   │
 │  │  ┌─────────┐  ┌──────────┐  ┌────────┐  ┌───────────┐  │   │
-│  │  │ AgentDB │  │ Workflow │  │ Worker │  │ AIProvider│  │   │
-│  │  │  Client │  │ Builder  │  │        │  │           │  │   │
+│  │  │ x404r   │  │ Workflow │  │ Worker │  │ AIProvider│  │   │
+│  │  │ Client  │  │ Builder  │  │        │  │           │  │   │
 │  │  └─────────┘  └──────────┘  └────────┘  └───────────┘  │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                              │                                  │
@@ -71,92 +75,177 @@ AgentDB is infrastructure for AI agents that:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Why CockroachDB?
+
+| Feature                  | How x404-r Uses It                        |
+| ------------------------ | ----------------------------------------- |
+| `FOR UPDATE SKIP LOCKED` | Atomic task claiming - no race conditions |
+| Multi-region             | Deploy workers close to data              |
+| Transactions             | Consistent checkpoints across crashes     |
+| JSON columns             | Flexible agent state storage              |
+| Horizontal scale         | Handle millions of agent tasks            |
+
 ## Quick Start
 
 ### 1. Install the SDK
 
 ```bash
-npm install @agentdb/sdk
+npm install @x404-r/sdk
 ```
 
-### 2. Create an Agent
+### 2. Create a Crash-Proof Agent
 
 ```typescript
-import { AgentDB } from '@agentdb/sdk';
+import { x404r } from "@x404-r/sdk";
 
-// Initialize
-const agent = await new AgentDB({
+// Initialize the runtime
+const runtime = await new x404r({
   connectionString: process.env.DATABASE_URL,
   ai: {
-    provider: 'gemini',
+    provider: "gemini",
     apiKey: process.env.GEMINI_API_KEY,
   },
 }).ready();
 
-// Define a workflow with crash-proof checkpoints
-const myWorkflow = agent.workflow('process-documents', {
+// Define a workflow - context is NEVER lost
+const processDocuments = runtime.workflow("process-docs", {
   steps: [
     {
-      name: 'extract',
+      name: "extract",
       handler: async (ctx) => {
         const docs = ctx.input.documents;
 
-        for (let i = 0; i < docs.length; i++) {
+        // Resume from last checkpoint if we crashed
+        let processed = ctx.state.processed || 0;
+
+        for (let i = processed; i < docs.length; i++) {
           const result = await ctx.ai.generate(`Extract data from: ${docs[i]}`);
 
-          // Checkpoint after each document - crash-proof!
-          await ctx.checkpoint({ processed: i + 1, results: [...(ctx.state.results || []), result] });
+          // Checkpoint - survives any crash!
+          await ctx.checkpoint({
+            processed: i + 1,
+            results: [...(ctx.state.results || []), result],
+          });
         }
 
         return { extracted: ctx.state.results };
       },
     },
     {
-      name: 'summarize',
-      dependsOn: ['extract'],
+      name: "summarize",
+      dependsOn: ["extract"],
       handler: async (ctx) => {
-        const summary = await ctx.ai.generate('Summarize all extracted data...');
+        const summary = await ctx.ai.generate(
+          "Summarize all extracted data...",
+        );
         return { summary };
       },
     },
   ],
 });
 
-// Start workers
-const worker = agent.worker({ concurrency: 5 });
-worker.register(myWorkflow);
+// Start workers (stateless - can crash anytime)
+const worker = runtime.worker({ concurrency: 5 });
+worker.register(processDocuments);
 await worker.start();
 
 // Run the workflow
-const result = await myWorkflow.run({ documents: ['doc1.pdf', 'doc2.pdf'] }, { wait: true });
+const result = await processDocuments.run(
+  { documents: ["doc1.pdf", "doc2.pdf", "doc3.pdf"] },
+  { wait: true },
+);
+// Even if workers crash 100 times, this completes successfully
 ```
 
 ### 3. Set Up the Database
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-org/agentdb.git
-cd agentdb
+git clone https://github.com/your-org/x404-r.git
+cd x404-r
 
 # Install dependencies
 npm install
 
 # Set environment variables
 cp .env.example .env
-# Edit .env with your CockroachDB connection string and API keys
+# Edit .env with your CockroachDB connection string
 
 # Set up the database schema
 npm run setup-db
 ```
 
+## Core Concepts
+
+### Checkpoints = Context Saved
+
+```typescript
+handler: async (ctx) => {
+  for (const item of items) {
+    await processItem(item);
+
+    // Context saved to CockroachDB
+    await ctx.checkpoint({ lastItem: item });
+
+    // Worker crashes here? No problem.
+    // Next worker resumes from checkpoint.
+  }
+};
+```
+
+### DAG Workflows
+
+```typescript
+const workflow = runtime.workflow("pipeline", {
+  steps: [
+    { name: "a", handler: async (ctx) => ({ data: "a" }) },
+    { name: "b", handler: async (ctx) => ({ data: "b" }) },
+    // 'c' waits for both 'a' and 'b'
+    {
+      name: "c",
+      dependsOn: ["a", "b"],
+      handler: async (ctx) => ({ data: "c" }),
+    },
+  ],
+});
+```
+
+### Priority Scheduling
+
+```sql
+-- Enterprise customers processed first
+ORDER BY
+  CASE tenant.plan
+    WHEN 'enterprise' THEN 0
+    WHEN 'team' THEN 1
+    WHEN 'pro' THEN 2
+    ELSE 3
+  END,
+  job.priority DESC
+```
+
+### Memory & Learning
+
+```typescript
+// Agents learn from past executions
+// Before each task, similar memories are retrieved
+ctx.state._memories = [
+  {
+    summary: "Task X failed due to rate limit",
+    resolution: "Added retry logic",
+  },
+  { summary: "Task Y succeeded with batch size 10", resolution: null },
+];
+```
+
 ## Project Structure
 
 ```
-agentdb/
+x404-r/
 ├── packages/
-│   ├── sdk/                 # @agentdb/sdk - Core SDK
+│   ├── sdk/                 # @x404-r/sdk - Core SDK
 │   │   ├── src/
-│   │   │   ├── client.ts    # Main AgentDB client
+│   │   │   ├── client.ts    # Main x404r client
 │   │   │   ├── workflow.ts  # Workflow builder with DAG validation
 │   │   │   ├── worker.ts    # Task processor with heartbeats
 │   │   │   ├── context.ts   # Step context with checkpointing
@@ -167,15 +256,12 @@ agentdb/
 │   ├── shared/              # Shared utilities
 │   │   ├── auth.ts          # API key utilities
 │   │   ├── tenant-db.ts     # Multi-tenant database wrapper
-│   │   ├── usage.ts         # Usage tracking
 │   │   └── middleware.ts    # Auth middleware
 │   │
 │   ├── dashboard/           # Next.js dashboard
-│   │   ├── app/
-│   │   │   ├── page.tsx     # Main dashboard with React Flow
-│   │   │   ├── admin/       # Admin panel
-│   │   │   └── login/       # GitHub OAuth login
-│   │   └── components/      # UI components
+│   │   └── app/
+│   │       ├── page.tsx     # Main dashboard with React Flow
+│   │       └── admin/       # Admin panel
 │   │
 │   ├── worker/              # Lambda worker handlers
 │   └── supervisor/          # Task decomposition
@@ -184,102 +270,29 @@ agentdb/
 │   ├── setup-db.sql         # Database schema
 │   └── local-server.ts      # Local development server
 │
-├── infrastructure/          # AWS CDK
-└── demo-repo/               # Sample code for demos
-```
-
-## Core Concepts
-
-### Workflows
-
-Workflows define a DAG of steps with dependencies:
-
-```typescript
-const workflow = agent.workflow('my-workflow', {
-  steps: [
-    { name: 'a', handler: async (ctx) => ({ result: 'a' }) },
-    { name: 'b', handler: async (ctx) => ({ result: 'b' }) },
-    { name: 'c', dependsOn: ['a', 'b'], handler: async (ctx) => ({ result: 'c' }) },
-  ],
-});
-```
-
-### Checkpoints
-
-Save state to survive crashes:
-
-```typescript
-handler: async (ctx) => {
-  for (const item of items) {
-    await processItem(item);
-    await ctx.checkpoint({ lastProcessed: item }); // Saved to CockroachDB
-  }
-  // If worker crashes, next worker resumes from last checkpoint
-}
-```
-
-### Priority Scheduling
-
-Enterprise tenants get priority through CockroachDB query:
-
-```sql
-ORDER BY
-  CASE tenant.plan
-    WHEN 'enterprise' THEN 0
-    WHEN 'team' THEN 1
-    WHEN 'pro' THEN 2
-    ELSE 3
-  END,
-  job.priority DESC,
-  task.created_at ASC
-```
-
-### Memory & Learning
-
-Agents learn from past executions:
-
-```typescript
-// Automatically queries similar past tasks before execution
-const memories = await client.queryMemories(embedding, taskType, 5);
-// memories: [{ summary: "Task X failed due to...", resolution: "Fixed by..." }]
+└── infrastructure/          # AWS CDK
 ```
 
 ## Multi-Tenant Features
 
-| Feature | Description |
-|---------|-------------|
-| **Tenant Isolation** | All data scoped by `tenant_id` |
-| **API Key Auth** | SHA-256 hashed keys with scopes |
-| **Usage Tracking** | Task counts, API calls per billing period |
-| **Rate Limiting** | Configurable limits per plan |
-| **Priority Queue** | Higher-tier tenants processed first |
-
-## Database Schema
-
-```sql
--- Core tables
-tenants           -- Organizations/workspaces
-jobs              -- Workflow instances
-task_nodes        -- Individual tasks with dependencies
-checkpoints       -- Crash-recovery state snapshots
-memory_vectors    -- Past execution embeddings
-
--- Auth & billing
-api_keys          -- Hashed API keys with scopes
-usage_events      -- Individual usage records
-usage_monthly     -- Aggregated monthly usage
-```
+| Feature              | Description                               |
+| -------------------- | ----------------------------------------- |
+| **Tenant Isolation** | All data scoped by `tenant_id`            |
+| **API Key Auth**     | SHA-256 hashed keys with scopes           |
+| **Usage Tracking**   | Task counts, API calls per billing period |
+| **Rate Limiting**    | Configurable limits per plan              |
+| **Priority Queue**   | Higher-tier tenants processed first       |
 
 ## Local Development
 
 ```bash
-# Terminal 1: Start the backend
+# Terminal 1: Backend
 npm run dev:server
 
-# Terminal 2: Start the dashboard
+# Terminal 2: Dashboard
 npm run dev:dashboard
 
-# Terminal 3: Run the SDK examples
+# Terminal 3: Run examples
 cd packages/sdk
 npx tsx examples/simple-workflow.ts
 npx tsx examples/code-review-agent.ts
@@ -289,37 +302,37 @@ npx tsx examples/code-review-agent.ts
 
 ```bash
 # Set secrets
-aws secretsmanager create-secret --name agentdb/database-url --secret-string "your-db-url"
-aws secretsmanager create-secret --name agentdb/gemini-api-key --secret-string "your-api-key"
+aws secretsmanager create-secret --name x404-r/database-url --secret-string "your-db-url"
+aws secretsmanager create-secret --name x404-r/gemini-api-key --secret-string "your-api-key"
 
 # Deploy with CDK
 cd infrastructure
 npm run deploy
 ```
 
-## API Reference
+## Why "x404-r"?
 
-See [SDK Documentation](./packages/sdk/README.md) for full API reference.
+```
+x    = the unknown, the variable, the experimental
+404  = "Not Found" - the error that haunts long-running agents
+r    = Runtime
 
-### Key Classes
+x404-r = The runtime where context is never "not found"
+```
 
-- **`AgentDB`** - Main client for database and AI operations
-- **`WorkflowBuilder`** - Defines workflows with step dependencies
-- **`Worker`** - Claims and processes tasks with heartbeats
-- **`StepContext`** - Available in handlers: `input`, `ai`, `checkpoint()`, `log()`
+When your agent runs for hours and a worker crashes, traditional systems return a metaphorical 404 - your context is gone. x404-r ensures that never happens.
 
 ## Roadmap
 
 - [x] Core SDK with checkpointing
 - [x] Multi-tenant database schema
 - [x] API key authentication
-- [x] Usage tracking
-- [x] Priority scheduling
+- [x] Usage tracking & priority scheduling
 - [x] Dashboard with React Flow
 - [x] AI provider abstraction (Gemini/OpenAI/Anthropic)
 - [ ] Stripe billing integration
 - [ ] Webhook notifications
-- [ ] SDK for Python
+- [ ] Python SDK
 - [ ] Self-hosted deployment guide
 
 ## License
@@ -328,4 +341,6 @@ MIT
 
 ---
 
-Built for the AWS + CockroachDB Hackathon 2024
+**x404-r** - Context is never lost.
+
+Built for the AWS + CockroachDB Hackathon

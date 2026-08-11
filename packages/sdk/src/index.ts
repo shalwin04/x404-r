@@ -1,21 +1,22 @@
 /**
- * AgentDB SDK
+ * x404-r SDK
+ * The runtime where context is never lost
  * Database-native infrastructure for crash-proof AI agents
  *
  * @example
  * ```typescript
- * import { AgentDB } from '@agentdb/sdk';
+ * import { x404r } from '@x404-r/sdk';
  *
- * const agent = new AgentDB({
+ * const runtime = await new x404r({
  *   connectionString: process.env.DATABASE_URL,
  *   ai: {
  *     provider: 'gemini',
  *     apiKey: process.env.GEMINI_API_KEY,
  *   },
- * });
+ * }).ready();
  *
- * // Define a workflow
- * const refactor = agent.workflow('refactor-code', {
+ * // Define a crash-proof workflow
+ * const refactor = runtime.workflow('refactor-code', {
  *   steps: [
  *     {
  *       name: 'analyze',
@@ -41,8 +42,8 @@
  *   ],
  * });
  *
- * // Start a worker
- * const worker = agent.worker({ concurrency: 5 });
+ * // Start a worker (stateless - can crash anytime)
+ * const worker = runtime.worker({ concurrency: 5 });
  * worker.register(refactor);
  * await worker.start();
  *
@@ -55,7 +56,7 @@
  */
 
 // Main client
-export { AgentDB } from './client.js';
+export { AgentDB, AgentDB as x404r } from './client.js';
 
 // Workflow builder
 export { WorkflowBuilder } from './workflow.js';

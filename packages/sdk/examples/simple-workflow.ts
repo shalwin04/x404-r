@@ -1,19 +1,19 @@
 /**
  * Example: Simple Workflow
- * Basic workflow demonstrating checkpoints and crash recovery
+ * Demonstrates checkpoints and crash recovery with x404-r
  *
  * Run with: npx tsx examples/simple-workflow.ts
  */
 
-import { AgentDB } from '../src/index.js';
+import { x404r } from '../src/index.js';
 
-const agent = new AgentDB({
-  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:26257/agentdb',
+const runtime = await new x404r({
+  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:26257/x404r',
   debug: true,
-});
+}).ready();
 
-// Define a simple data processing workflow
-const processData = agent.workflow<
+// Define a crash-proof data processing workflow
+const processData = runtime.workflow<
   { items: string[] },
   { processed: number }
 >('process-data', {
@@ -22,19 +22,20 @@ const processData = agent.workflow<
       name: 'process-items',
       handler: async (ctx) => {
         const items = ctx.input.items;
+
+        // Resume from checkpoint if we crashed
         let processed = (ctx.state.processed as number) || 0;
-        
+
         ctx.log('Starting from item ' + processed + ' of ' + items.length);
 
-        // Process each item with checkpoints
         for (let idx = processed; idx < items.length; idx++) {
           ctx.log('Processing item ' + (idx + 1) + ': ' + items[idx]);
-          
+
           // Simulate work
           await ctx.sleep(500);
-          
-          // Checkpoint after each item (crash-proof!)
-          // If the process crashes, it resumes from the last checkpoint
+
+          // Checkpoint after each item - CRASH-PROOF!
+          // If the process dies here, next worker resumes from this checkpoint
           processed = idx + 1;
           await ctx.checkpoint({ processed });
         }
@@ -46,10 +47,11 @@ const processData = agent.workflow<
 });
 
 async function main() {
-  console.log('Simple Workflow Example\n');
+  console.log('x404-r Simple Workflow Example\n');
+  console.log('Context is never lost - even if workers crash!\n');
 
   // Create and start a worker
-  const worker = agent.worker({ concurrency: 1 });
+  const worker = runtime.worker({ concurrency: 1 });
   worker.register(processData);
   await worker.start();
 
@@ -62,7 +64,7 @@ async function main() {
   console.log('\nResult:', result);
 
   await worker.stop();
-  await agent.close();
+  await runtime.close();
 }
 
 main().catch(console.error);

@@ -128,7 +128,7 @@ export class AgentDB {
    */
   async emit(event: WorkflowEvent): Promise<void> {
     if (this.debug) {
-      console.log(`[AgentDB] Event: ${event.type}`, event);
+      console.log(`[x404-r] Event: ${event.type}`, event);
     }
     for (const handler of this.eventHandlers) {
       await handler(event);
@@ -161,7 +161,7 @@ export class AgentDB {
    */
   log(message: string, data?: Record<string, unknown>): void {
     if (this.debug) {
-      console.log(`[AgentDB] ${message}`, data || '');
+      console.log(`[x404-r] ${message}`, data || '');
     }
   }
 
