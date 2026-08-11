@@ -1,0 +1,25 @@
+{
+  "name": "crash-proof-agent",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "infrastructure"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npx tsx scripts/local-server.ts",
+    "dev:dashboard": "npm run dev --workspace=packages/dashboard",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:dashboard\"",
+    "setup-db": "npx tsx scripts/setup-db.ts",
+    "seed-demo": "npx tsx scripts/seed-demo.ts",
+    "deploy": "npm run build && cd infrastructure && npm run deploy"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.21.0",
+    "concurrently": "^8.2.2",
+    "dotenv": "^17.4.2",
+    "pg": "^8.23.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
