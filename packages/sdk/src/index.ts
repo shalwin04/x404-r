@@ -68,7 +68,23 @@ export { Worker } from './worker.js';
 export { createStepContext, restoreFromCheckpoint } from './context.js';
 
 // AI providers
-export { createAIProvider, MockAIProvider } from './ai/index.js';
+export { createAIProvider, MockAIProvider, estimateCost } from './ai/index.js';
+
+// One-line durable API
+export { durable, createDurable, closeDurable } from './durable.js';
+export type { DurableContext, DurableOptions } from './durable.js';
+
+// Chaos engineering
+export {
+  ChaosEngine,
+  ChaosError,
+  createChaosCheckpoint,
+  withChaos,
+  isChaosEnabled,
+  DEFAULT_CHAOS_CONFIG,
+  STRESS_CHAOS_CONFIG,
+} from './chaos.js';
+export type { ChaosConfig, ChaosFailureType } from './chaos.js';
 
 // Types
 export type {
@@ -90,6 +106,11 @@ export type {
   AIConfig,
   GenerateOptions,
   JSONSchema,
+
+  // Cost tracking types
+  TokenUsage,
+  CostEstimate,
+  GenerateResult,
 
   // Config types
   AgentDBConfig,

@@ -9,14 +9,24 @@ const app = new cdk.App();
 const databaseSecretArn = process.env.DATABASE_SECRET_ARN;
 const geminiApiKeySecretArn = process.env.GEMINI_API_KEY_SECRET_ARN;
 
-new CrashProofStack(app, 'CrashProofAgentStack', {
+// Determine AI provider from environment
+const enableBedrock = process.env.AI_PROVIDER === 'bedrock';
+const bedrockRegion = process.env.BEDROCK_REGION;
+
+new CrashProofStack(app, 'X404rStack', {
   databaseSecretArn,
   geminiApiKeySecretArn,
+  enableBedrock,
+  bedrockRegion,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
   },
-  description: 'Crash-proof agent system with CockroachDB, Lambda, and Gemini',
+  description: 'x404-r: Database-native runtime for crash-proof AI agents',
+  tags: {
+    Project: 'x404-r',
+    Environment: process.env.ENVIRONMENT || 'development',
+  },
 });
 
 app.synth();

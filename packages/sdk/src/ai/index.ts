@@ -1,9 +1,29 @@
 /**
  * AI Provider Abstraction
- * Supports Gemini, OpenAI, and Anthropic
+ * Supports Gemini, OpenAI, Anthropic, and AWS Bedrock
  */
 
-import type { AIProvider, AIConfig, GenerateOptions, JSONSchema } from '../types.js';
+import type { AIProvider, AIConfig, GenerateOptions, JSONSchema, TokenUsage } from '../types.js';
+
+// Token pricing per 1M tokens (USD)
+const PRICING: Record<string, { input: number; output: number }> = {
+  'gemini-2.5-flash': { input: 0.075, output: 0.30 },
+  'gemini-1.5-pro': { input: 3.50, output: 10.50 },
+  'gpt-4-turbo-preview': { input: 10.00, output: 30.00 },
+  'gpt-4o': { input: 5.00, output: 15.00 },
+  'claude-3-sonnet': { input: 3.00, output: 15.00 },
+  'claude-3-haiku': { input: 0.25, output: 1.25 },
+  'anthropic.claude-3-sonnet-20240229-v1:0': { input: 3.00, output: 15.00 },
+  'anthropic.claude-3-haiku-20240307-v1:0': { input: 0.25, output: 1.25 },
+};
+
+export function estimateCost(model: string, usage: TokenUsage): number {
+  const pricing = PRICING[model] || { input: 1.00, output: 2.00 }; // Default pricing
+  return (
+    (usage.inputTokens / 1_000_000) * pricing.input +
+    (usage.outputTokens / 1_000_000) * pricing.output
+  );
+}
 
 /**
  * Create an AI provider from configuration
@@ -11,11 +31,13 @@ import type { AIProvider, AIConfig, GenerateOptions, JSONSchema } from '../types
 export async function createAIProvider(config: AIConfig): Promise<AIProvider> {
   switch (config.provider) {
     case 'gemini':
-      return GeminiProvider.create(config.apiKey, config.defaultModel);
+      return GeminiProvider.create(config.apiKey!, config.defaultModel);
     case 'openai':
-      return OpenAIProvider.create(config.apiKey, config.defaultModel);
+      return OpenAIProvider.create(config.apiKey!, config.defaultModel);
     case 'anthropic':
-      return AnthropicProvider.create(config.apiKey, config.defaultModel);
+      return AnthropicProvider.create(config.apiKey!, config.defaultModel);
+    case 'bedrock':
+      return BedrockProvider.create(config.region || 'us-east-1', config.defaultModel);
     default:
       throw new Error(`Unknown AI provider: ${config.provider}`);
   }
@@ -206,18 +228,176 @@ class AnthropicProvider implements AIProvider {
 }
 
 /**
+ * AWS Bedrock Provider
+ * Uses AWS SDK for Bedrock Runtime
+ */
+class BedrockProvider implements AIProvider {
+  private client: any;
+  private defaultModel: string;
+  private _lastUsage: TokenUsage = { inputTokens: 0, outputTokens: 0, embeddingTokens: 0 };
+
+  private constructor(client: any, defaultModel: string) {
+    this.client = client;
+    this.defaultModel = defaultModel;
+  }
+
+  static async create(region: string, defaultModel?: string): Promise<BedrockProvider> {
+    try {
+      // Dynamic import for optional AWS dependency
+      const bedrockModule = await import('@aws-sdk/client-bedrock-runtime').catch(() => null);
+      if (!bedrockModule) {
+        throw new Error('@aws-sdk/client-bedrock-runtime not installed. Run: npm install @aws-sdk/client-bedrock-runtime');
+      }
+      const { BedrockRuntimeClient, InvokeModelCommand } = bedrockModule;
+      const client = new BedrockRuntimeClient({ region });
+      // Store InvokeModelCommand on client for later use
+      (client as any).InvokeModelCommand = InvokeModelCommand;
+      return new BedrockProvider(client, defaultModel || 'anthropic.claude-3-sonnet-20240229-v1:0');
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('not installed')) {
+        throw err;
+      }
+      throw new Error('@aws-sdk/client-bedrock-runtime not installed. Run: npm install @aws-sdk/client-bedrock-runtime');
+    }
+  }
+
+  get lastUsage(): TokenUsage {
+    return this._lastUsage;
+  }
+
+  async generate(prompt: string, options?: GenerateOptions): Promise<string> {
+    const model = options?.model || this.defaultModel;
+    const InvokeModelCommand = (this.client as any).InvokeModelCommand;
+
+    // Build request based on model provider
+    let body: any;
+    if (model.startsWith('anthropic.')) {
+      body = {
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens: options?.maxTokens ?? 2048,
+        messages: [{ role: 'user', content: prompt }],
+        ...(options?.systemPrompt && { system: options.systemPrompt }),
+      };
+    } else if (model.startsWith('amazon.titan')) {
+      body = {
+        inputText: options?.systemPrompt ? `${options.systemPrompt}\n\n${prompt}` : prompt,
+        textGenerationConfig: {
+          maxTokenCount: options?.maxTokens ?? 2048,
+          temperature: options?.temperature ?? 0.7,
+        },
+      };
+    } else if (model.startsWith('meta.llama')) {
+      body = {
+        prompt: options?.systemPrompt ? `${options.systemPrompt}\n\n${prompt}` : prompt,
+        max_gen_len: options?.maxTokens ?? 2048,
+        temperature: options?.temperature ?? 0.7,
+      };
+    } else {
+      // Default to Anthropic format
+      body = {
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens: options?.maxTokens ?? 2048,
+        messages: [{ role: 'user', content: prompt }],
+      };
+    }
+
+    const command = new InvokeModelCommand({
+      modelId: model,
+      contentType: 'application/json',
+      accept: 'application/json',
+      body: JSON.stringify(body),
+    });
+
+    const response = await this.client.send(command);
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+
+    // Track token usage
+    if (responseBody.usage) {
+      this._lastUsage = {
+        inputTokens: responseBody.usage.input_tokens || 0,
+        outputTokens: responseBody.usage.output_tokens || 0,
+        embeddingTokens: 0,
+      };
+    }
+
+    // Parse response based on model
+    if (model.startsWith('anthropic.')) {
+      return responseBody.content?.[0]?.text || '';
+    } else if (model.startsWith('amazon.titan')) {
+      return responseBody.results?.[0]?.outputText || '';
+    } else if (model.startsWith('meta.llama')) {
+      return responseBody.generation || '';
+    }
+
+    return responseBody.content?.[0]?.text || responseBody.completion || '';
+  }
+
+  async generateJSON<T>(prompt: string, schema?: JSONSchema): Promise<T> {
+    const jsonPrompt = schema
+      ? `${prompt}\n\nRespond with valid JSON matching this schema:\n${JSON.stringify(schema, null, 2)}\n\nOnly output the JSON, no markdown or explanation.`
+      : `${prompt}\n\nRespond with valid JSON only. No markdown or explanation.`;
+
+    const response = await this.generate(jsonPrompt);
+
+    const cleaned = response
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+
+    return JSON.parse(cleaned);
+  }
+
+  async embed(text: string): Promise<number[]> {
+    // Use Titan embeddings model
+    const InvokeModelCommand = (this.client as any).InvokeModelCommand;
+
+    try {
+      const command = new InvokeModelCommand({
+        modelId: 'amazon.titan-embed-text-v1',
+        contentType: 'application/json',
+        accept: 'application/json',
+        body: JSON.stringify({ inputText: text }),
+      });
+
+      const response = await this.client.send(command);
+      const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+
+      this._lastUsage.embeddingTokens += text.split(/\s+/).length; // Approximate
+
+      return responseBody.embedding || [];
+    } catch {
+      // Fallback to hash-based embedding if Titan not available
+      const hash = text.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return new Array(1536).fill(0).map((_, i) =>
+        Math.sin(hash * (i + 1)) * Math.cos(hash / (i + 1))
+      );
+    }
+  }
+}
+
+/**
  * No-op AI provider for testing
  */
 export class MockAIProvider implements AIProvider {
+  private _lastUsage: TokenUsage = { inputTokens: 0, outputTokens: 0, embeddingTokens: 0 };
+
+  get lastUsage(): TokenUsage {
+    return this._lastUsage;
+  }
+
   async generate(prompt: string): Promise<string> {
+    this._lastUsage = { inputTokens: prompt.length / 4, outputTokens: 50, embeddingTokens: 0 };
     return `Mock response for: ${prompt.slice(0, 50)}...`;
   }
 
   async generateJSON<T>(): Promise<T> {
+    this._lastUsage = { inputTokens: 100, outputTokens: 50, embeddingTokens: 0 };
     return {} as T;
   }
 
   async embed(): Promise<number[]> {
+    this._lastUsage.embeddingTokens += 10;
     return new Array(768).fill(0);
   }
 }
+

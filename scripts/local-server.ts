@@ -256,6 +256,279 @@ async function handleGetJob(jobId: string, context: TenantContext): Promise<unkn
   return { job, tasks, stats };
 }
 
+// ============ Time Travel & Cost Tracking ============
+
+async function handleGetJobCheckpoints(jobId: string, context: TenantContext): Promise<unknown> {
+  const tenantDb = new TenantDatabase(db, context);
+  const job = await tenantDb.getJob(jobId);
+  if (!job) throw new NotFoundError('Job not found');
+
+  // Get all checkpoints for this job's tasks
+  const result = await db.query<{
+    id: string;
+    task_id: string;
+    step_number: number;
+    state: Record<string, unknown>;
+    created_at: Date;
+    task_name: string;
+    task_type: string;
+  }>(`
+    SELECT c.id, c.task_id, c.step_number, c.state, c.created_at,
+           t.name as task_name, t.task_type
+    FROM checkpoints c
+    JOIN task_nodes t ON c.task_id = t.id
+    WHERE t.job_id = $1 AND t.tenant_id = $2
+    ORDER BY c.created_at ASC
+  `, [jobId, context.tenantId]);
+
+  return {
+    jobId,
+    checkpoints: result.rows.map(cp => ({
+      id: cp.id,
+      taskId: cp.task_id,
+      taskName: cp.task_name,
+      taskType: cp.task_type,
+      stepNumber: cp.step_number,
+      state: cp.state,
+      createdAt: cp.created_at.toISOString(),
+    })),
+    count: result.rows.length,
+  };
+}
+
+async function handleReplayFromCheckpoint(
+  jobId: string,
+  body: Record<string, unknown>,
+  context: TenantContext
+): Promise<unknown> {
+  const tenantDb = new TenantDatabase(db, context);
+  const originalJob = await tenantDb.getJob(jobId);
+  if (!originalJob) throw new NotFoundError('Job not found');
+
+  const { checkpointId, fromTaskId, newInput } = body as {
+    checkpointId?: string;
+    fromTaskId?: string;
+    newInput?: Record<string, unknown>;
+  };
+
+  if (!checkpointId && !fromTaskId) {
+    throw new Error('Either checkpointId or fromTaskId required');
+  }
+
+  // Get the checkpoint or task to replay from
+  let replayFromTaskId: string;
+  let checkpointState: Record<string, unknown> | null = null;
+
+  if (checkpointId) {
+    const cpResult = await db.query<{ task_id: string; state: Record<string, unknown> }>(
+      'SELECT task_id, state FROM checkpoints WHERE id = $1',
+      [checkpointId]
+    );
+    if (!cpResult.rows[0]) throw new NotFoundError('Checkpoint not found');
+    replayFromTaskId = cpResult.rows[0].task_id;
+    checkpointState = cpResult.rows[0].state;
+  } else {
+    replayFromTaskId = fromTaskId!;
+  }
+
+  // Get the original task
+  const taskResult = await db.query<{
+    name: string;
+    task_type: string;
+    input_payload: Record<string, unknown>;
+    depends_on: string[];
+  }>(
+    'SELECT name, task_type, input_payload, depends_on FROM task_nodes WHERE id = $1 AND tenant_id = $2',
+    [replayFromTaskId, context.tenantId]
+  );
+  if (!taskResult.rows[0]) throw new NotFoundError('Task not found');
+  const originalTask = taskResult.rows[0];
+
+  // Create a new job for the replay
+  const replayJob = await tenantDb.createJob({
+    name: `Replay: ${originalJob.name}`,
+    description: `Time travel replay from checkpoint at task "${originalTask.name}"`,
+    input_payload: {
+      ...originalJob.input_payload,
+      ...(newInput || {}),
+      __replay: {
+        originalJobId: jobId,
+        fromTaskId: replayFromTaskId,
+        checkpointId,
+        checkpointState,
+        timestamp: new Date().toISOString(),
+      },
+    },
+  });
+
+  // Get all tasks from the original job that come at or after the replay point
+  // This includes the replay task and all its dependents
+  const allTasksResult = await db.query<{
+    id: string;
+    name: string;
+    task_type: string;
+    input_payload: Record<string, unknown>;
+    depends_on: string[];
+  }>(
+    'SELECT id, name, task_type, input_payload, depends_on FROM task_nodes WHERE job_id = $1 ORDER BY created_at',
+    [jobId]
+  );
+
+  // Build dependency graph and find tasks to replay
+  const tasksToReplay = new Set<string>();
+  const queue = [replayFromTaskId];
+
+  while (queue.length > 0) {
+    const taskId = queue.shift()!;
+    if (tasksToReplay.has(taskId)) continue;
+    tasksToReplay.add(taskId);
+
+    // Find tasks that depend on this one
+    for (const task of allTasksResult.rows) {
+      if (task.depends_on.includes(taskId)) {
+        queue.push(task.id);
+      }
+    }
+  }
+
+  // Create new tasks for the replay
+  const idMapping: Record<string, string> = {};
+
+  for (const task of allTasksResult.rows) {
+    if (!tasksToReplay.has(task.id)) continue;
+
+    // Map old dependency IDs to new IDs
+    const newDependsOn = task.depends_on
+      .filter(depId => tasksToReplay.has(depId))
+      .map(depId => idMapping[depId] || depId);
+
+    const newTaskResult = await db.query<{ id: string }>(
+      `INSERT INTO task_nodes (job_id, tenant_id, task_type, name, input_payload, depends_on, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+       RETURNING id`,
+      [
+        replayJob.id,
+        context.tenantId,
+        task.task_type,
+        task.name,
+        task.id === replayFromTaskId && checkpointState
+          ? { ...task.input_payload, __checkpoint: checkpointState }
+          : task.input_payload,
+        newDependsOn,
+      ]
+    );
+
+    idMapping[task.id] = newTaskResult.rows[0].id;
+  }
+
+  await tenantDb.updateJobStatus(replayJob.id, 'running');
+
+  // Record usage
+  await recordUsageEvent(db, context, 'job_created', 1, { replay: true }, replayJob.id);
+  await recordUsageEvent(db, context, 'task_created', tasksToReplay.size, {}, replayJob.id);
+
+  return {
+    replayJobId: replayJob.id,
+    originalJobId: jobId,
+    fromTaskId: replayFromTaskId,
+    checkpointId,
+    tasksCreated: tasksToReplay.size,
+    idMapping,
+  };
+}
+
+async function handleGetJobCost(jobId: string, context: TenantContext): Promise<unknown> {
+  const tenantDb = new TenantDatabase(db, context);
+  const job = await tenantDb.getJob(jobId);
+  if (!job) throw new NotFoundError('Job not found');
+
+  // Get tasks with their token usage
+  const result = await db.query<{
+    id: string;
+    name: string;
+    task_type: string;
+    status: string;
+    ai_tokens_used: number | null;
+    attempt_count: number;
+    output_payload: Record<string, unknown> | null;
+  }>(`
+    SELECT id, name, task_type, status, ai_tokens_used, attempt_count, output_payload
+    FROM task_nodes
+    WHERE job_id = $1 AND tenant_id = $2
+  `, [jobId, context.tenantId]);
+
+  // Token pricing (per 1M tokens)
+  const PRICING = {
+    input: 0.075,  // Gemini 2.5 Flash input
+    output: 0.30,  // Gemini 2.5 Flash output
+  };
+
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let totalAttempts = 0;
+  let successfulAttempts = 0;
+
+  const taskCosts = result.rows.map(task => {
+    // Estimate tokens from task (rough estimate if not tracked)
+    const inputTokens = task.ai_tokens_used || 500;  // Default estimate
+    const outputTokens = task.output_payload ? JSON.stringify(task.output_payload).length / 4 : 200;
+
+    totalInputTokens += inputTokens;
+    totalOutputTokens += outputTokens;
+    totalAttempts += task.attempt_count;
+    if (task.status === 'done') successfulAttempts++;
+
+    const cost = (inputTokens / 1_000_000) * PRICING.input + (outputTokens / 1_000_000) * PRICING.output;
+
+    return {
+      taskId: task.id,
+      taskName: task.name,
+      taskType: task.task_type,
+      status: task.status,
+      attempts: task.attempt_count,
+      tokens: {
+        input: inputTokens,
+        output: outputTokens,
+      },
+      estimatedCostUsd: Math.round(cost * 10000) / 10000,
+    };
+  });
+
+  const totalCost = (totalInputTokens / 1_000_000) * PRICING.input +
+                    (totalOutputTokens / 1_000_000) * PRICING.output;
+
+  // Calculate savings from crash recovery
+  // (avoided re-running completed tasks on crashes)
+  const crashRecoveries = totalAttempts - result.rows.length;
+  const savedTasks = crashRecoveries > 0 ? successfulAttempts : 0;
+  const savedCost = savedTasks > 0 ? (totalCost / result.rows.length) * savedTasks : 0;
+
+  return {
+    jobId,
+    jobName: job.name,
+    status: job.status,
+    summary: {
+      totalTasks: result.rows.length,
+      completedTasks: successfulAttempts,
+      totalAttempts,
+      crashRecoveries: Math.max(0, crashRecoveries),
+      tokens: {
+        input: totalInputTokens,
+        output: totalOutputTokens,
+        total: totalInputTokens + totalOutputTokens,
+      },
+      estimatedCostUsd: Math.round(totalCost * 10000) / 10000,
+      savedByRecoveryUsd: Math.round(savedCost * 10000) / 10000,
+    },
+    tasks: taskCosts,
+    pricing: {
+      model: 'gemini-2.5-flash',
+      inputPer1MTokens: PRICING.input,
+      outputPer1MTokens: PRICING.output,
+    },
+  };
+}
+
 async function handleKillWorker(body: Record<string, unknown>): Promise<unknown> {
   const { taskId } = body as { taskId: string };
   if (!taskId) throw new Error('taskId required');
@@ -654,6 +927,23 @@ const server = http.createServer(async (req, res) => {
       await recordUsageEvent(db, context, 'api_call');
       const jobId = path.split('/')[2];
       result = await handleGetJob(jobId, context);
+    } else if (path.match(/^\/jobs\/[\w-]+\/checkpoints$/) && req.method === 'GET') {
+      // Time Travel: Get all checkpoints for a job
+      const context = await getTenantContext(req);
+      const jobId = path.split('/')[2];
+      result = await handleGetJobCheckpoints(jobId, context);
+    } else if (path.match(/^\/jobs\/[\w-]+\/replay$/) && req.method === 'POST') {
+      // Time Travel: Replay from a checkpoint
+      const context = await getTenantContext(req);
+      const jobId = path.split('/')[2];
+      const body = await parseBody(req);
+      result = await handleReplayFromCheckpoint(jobId, body, context);
+      statusCode = 201;
+    } else if (path.match(/^\/jobs\/[\w-]+\/cost$/) && req.method === 'GET') {
+      // Cost Tracking: Get cost breakdown for a job
+      const context = await getTenantContext(req);
+      const jobId = path.split('/')[2];
+      result = await handleGetJobCost(jobId, context);
     } else if (path === '/usage' && req.method === 'GET') {
       const context = await getTenantContext(req);
       result = await handleGetUsage(context);
@@ -741,6 +1031,9 @@ server.listen(PORT, () => {
   console.log('  POST /jobs                     - Create a job');
   console.log('  POST /jobs/demo                - Create demo job');
   console.log('  GET  /jobs/:id                 - Get job details');
+  console.log('  GET  /jobs/:id/checkpoints     - Get job checkpoints (time travel)');
+  console.log('  POST /jobs/:id/replay          - Replay from checkpoint');
+  console.log('  GET  /jobs/:id/cost            - Get job cost breakdown');
   console.log('  GET  /usage                    - Get usage info');
   console.log('');
   console.log('Debug Endpoints:');

@@ -152,9 +152,30 @@ export interface AgentDBConfig {
 }
 
 export interface AIConfig {
-  provider: 'gemini' | 'openai' | 'anthropic';
-  apiKey: string;
+  provider: 'gemini' | 'openai' | 'anthropic' | 'bedrock';
+  apiKey?: string;
   defaultModel?: string;
+  /** AWS region for Bedrock */
+  region?: string;
+}
+
+// ============ Cost Tracking ============
+
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  embeddingTokens: number;
+}
+
+export interface CostEstimate {
+  tokens: TokenUsage;
+  estimatedCostUsd: number;
+  savedByRecoveryUsd?: number;
+}
+
+export interface GenerateResult {
+  content: string;
+  usage?: TokenUsage;
 }
 
 // ============ Worker Configuration ============

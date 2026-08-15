@@ -32,15 +32,24 @@ Context? Always found. Progress? Never lost. Agents? Crash-proof.
 | Component               | Status      | Description                                           |
 | ----------------------- | ----------- | ----------------------------------------------------- |
 | **Core SDK**            | ✅ Complete | `@x404-r/sdk` - TypeScript SDK for crash-proof agents |
+| **One-Line API**        | ✅ Complete | `durable()` function for instant crash-proofing       |
 | **Database Schema**     | ✅ Complete | Multi-tenant schema with checkpoints, memory vectors  |
 | **Multi-Tenancy**       | ✅ Complete | Tenant isolation, API key auth, usage tracking        |
-| **AI Integration**      | ✅ Complete | Gemini, OpenAI, Anthropic support                     |
-| **Dashboard**           | ✅ Complete | React Flow visualization, admin panel                 |
+| **AI Integration**      | ✅ Complete | Gemini, OpenAI, Anthropic, **AWS Bedrock** support    |
+| **Time Travel**         | ✅ Complete | Replay workflows from any checkpoint                  |
+| **Cost Tracking**       | ✅ Complete | Token usage tracking, cost transparency               |
+| **Dashboard**           | ✅ Complete | React Flow visualization, usage & settings pages      |
 | **Worker System**       | ✅ Complete | Task claiming, heartbeats, crash recovery             |
 | **Priority Scheduling** | ✅ Complete | Enterprise > Team > Pro > Free tenant priority        |
-| **AWS Deployment**      | 🔧 Ready    | CDK infrastructure (Lambda + CockroachDB)             |
-| **GitHub OAuth**        | 🔧 Ready    | Session management, user auth                         |
-| **Stripe Billing**      | ⏳ Planned  | Usage-based billing integration                       |
+| **AWS Deployment**      | 🔧 Ready    | Lambda handlers ready for deployment                  |
+| **GitHub OAuth**        | ✅ Complete | Session management, user auth                         |
+
+### Hackathon Requirements
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **CockroachDB (2+ tools)** | ✅ FOR UPDATE SKIP LOCKED, Distributed Transactions, Vector Storage |
+| **AWS (1+ services)** | ✅ Lambda (handlers ready), Bedrock (AI provider) |
 
 ## Architecture
 
@@ -322,6 +331,70 @@ x404-r = The runtime where context is never "not found"
 
 When your agent runs for hours and a worker crashes, traditional systems return a metaphorical 404 - your context is gone. x404-r ensures that never happens.
 
+## New Features
+
+### One-Line Durability
+
+The simplest way to make any function crash-proof:
+
+```typescript
+import { durable } from '@x404-r/sdk';
+
+const result = await durable('my-task', async (ctx) => {
+  await ctx.checkpoint('step-1');  // Survives crashes
+  const data = await fetchData();
+  await ctx.checkpoint('step-2');
+  return processData(data);
+});
+```
+
+### Time Travel Debugging
+
+Replay any workflow from any checkpoint:
+
+```bash
+# Get checkpoints for a job
+GET /jobs/:id/checkpoints
+
+# Replay from a specific checkpoint
+POST /jobs/:id/replay
+{
+  "checkpointId": "checkpoint-uuid",
+  "newInput": { ... }  // Optional input override
+}
+```
+
+### Cost Transparency
+
+Track exactly what you're spending:
+
+```bash
+GET /jobs/:id/cost
+
+{
+  "summary": {
+    "estimatedCostUsd": 0.0023,
+    "savedByRecoveryUsd": 0.0018,  // Money saved by not re-running on crash
+    "tokens": { "input": 1200, "output": 450 }
+  }
+}
+```
+
+### AWS Bedrock Integration
+
+Use Claude, Titan, or Llama via AWS Bedrock:
+
+```typescript
+const runtime = await new x404r({
+  connectionString: process.env.DATABASE_URL,
+  ai: {
+    provider: 'bedrock',
+    region: 'us-east-1',
+    defaultModel: 'anthropic.claude-3-sonnet-20240229-v1:0',
+  },
+}).ready();
+```
+
 ## Roadmap
 
 - [x] Core SDK with checkpointing
@@ -329,7 +402,10 @@ When your agent runs for hours and a worker crashes, traditional systems return 
 - [x] API key authentication
 - [x] Usage tracking & priority scheduling
 - [x] Dashboard with React Flow
-- [x] AI provider abstraction (Gemini/OpenAI/Anthropic)
+- [x] AI provider abstraction (Gemini/OpenAI/Anthropic/Bedrock)
+- [x] One-line durable API
+- [x] Time travel debugging
+- [x] Cost transparency
 - [ ] Stripe billing integration
 - [ ] Webhook notifications
 - [ ] Python SDK
@@ -343,4 +419,4 @@ MIT
 
 **x404-r** - Context is never lost.
 
-Built for the AWS + CockroachDB Hackathon
+Built for the [CockroachDB x AWS Hackathon](https://cockroachdb-ai.devpost.com/)

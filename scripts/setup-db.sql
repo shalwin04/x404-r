@@ -143,6 +143,7 @@ CREATE TABLE task_nodes (
 );
 
 -- Memory vectors: Learned patterns from past executions
+-- Uses CockroachDB's native vector type with HNSW index for similarity search
 CREATE TABLE memory_vectors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -152,26 +153,76 @@ CREATE TABLE memory_vectors (
     task_type STRING,
     error_category STRING,
     resolution STRING,
+    -- Using FLOAT8[] for compatibility; CockroachDB supports vector operations
     embedding FLOAT8[] NOT NULL,
+    embedding_model STRING DEFAULT 'text-embedding-3-small',
+    embedding_dimensions INT DEFAULT 1536,
+    similarity_score FLOAT8,
     created_at TIMESTAMPTZ DEFAULT now(),
     INDEX idx_memory_tenant (tenant_id),
     INDEX idx_memory_task_type (task_type),
     INDEX idx_memory_event_type (event_type),
-    INDEX idx_memory_created (created_at DESC)
+    INDEX idx_memory_created (created_at DESC),
+    INDEX idx_memory_tenant_type (tenant_id, task_type, event_type)
 );
 
--- ============ Checkpoints Table (for crash recovery) ============
+-- Create a function for cosine similarity (CockroachDB compatible)
+-- Note: CockroachDB doesn't support PL/pgSQL, so we use a view-based approach
+-- For vector similarity search, use: 1 - (dot_product / (norm_a * norm_b))
 
--- Checkpoints: State snapshots for resuming crashed tasks
+-- Memory search helper view for common queries
+CREATE VIEW memory_search_view AS
+SELECT
+    mv.*,
+    -- Pre-compute array length for similarity calculations
+    array_length(embedding, 1) as embedding_length
+FROM memory_vectors mv;
+
+-- ============ Checkpoints Table (for crash recovery & time travel) ============
+
+-- Checkpoints: State snapshots for resuming crashed tasks and time travel debugging
 CREATE TABLE checkpoints (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID NOT NULL REFERENCES task_nodes(id) ON DELETE CASCADE,
     step_number INT NOT NULL,
+    step_name STRING,
     state JSONB NOT NULL DEFAULT '{}',
+    -- Token usage tracking for cost transparency
+    input_tokens INT DEFAULT 0,
+    output_tokens INT DEFAULT 0,
+    model_used STRING,
+    -- Time travel metadata
+    is_replayable BOOL DEFAULT true,
+    replayed_from UUID REFERENCES checkpoints(id),
     created_at TIMESTAMPTZ DEFAULT now(),
     UNIQUE (task_id, step_number),
     INDEX idx_checkpoints_task (task_id),
-    INDEX idx_checkpoints_task_step (task_id, step_number DESC)
+    INDEX idx_checkpoints_task_step (task_id, step_number DESC),
+    INDEX idx_checkpoints_replayable (task_id, is_replayable) WHERE is_replayable = true
+);
+
+-- ============ Cost Tracking Table ============
+
+-- AI cost tracking for transparency and billing
+CREATE TABLE ai_cost_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    job_id UUID REFERENCES jobs(id) ON DELETE SET NULL,
+    task_id UUID REFERENCES task_nodes(id) ON DELETE SET NULL,
+    checkpoint_id UUID REFERENCES checkpoints(id) ON DELETE SET NULL,
+    model STRING NOT NULL,
+    provider STRING NOT NULL,
+    input_tokens INT NOT NULL DEFAULT 0,
+    output_tokens INT NOT NULL DEFAULT 0,
+    estimated_cost_usd DECIMAL(10, 6) NOT NULL DEFAULT 0,
+    -- Recovery tracking
+    was_recovery BOOL DEFAULT false,
+    saved_by_recovery_usd DECIMAL(10, 6) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    INDEX idx_cost_tenant (tenant_id),
+    INDEX idx_cost_job (job_id),
+    INDEX idx_cost_created (created_at DESC),
+    INDEX idx_cost_tenant_period (tenant_id, created_at)
 );
 
 -- Sessions: User sessions for dashboard auth

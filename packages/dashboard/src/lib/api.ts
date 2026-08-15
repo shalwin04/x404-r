@@ -167,6 +167,105 @@ export async function getUsage(): Promise<TenantUsageResponse> {
   return handleResponse(res);
 }
 
+// ============ Time Travel APIs ============
+
+export interface Checkpoint {
+  id: string;
+  taskId: string;
+  taskName: string;
+  taskType: string;
+  stepNumber: number;
+  state: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface CheckpointsResponse {
+  jobId: string;
+  checkpoints: Checkpoint[];
+  count: number;
+}
+
+export async function getJobCheckpoints(jobId: string): Promise<CheckpointsResponse> {
+  const res = await fetch(`${API_BASE}/jobs/${jobId}/checkpoints`, {
+    headers: getHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export interface ReplayOptions {
+  checkpointId?: string;
+  fromTaskId?: string;
+  newInput?: Record<string, unknown>;
+}
+
+export interface ReplayResponse {
+  replayJobId: string;
+  originalJobId: string;
+  fromTaskId: string;
+  checkpointId?: string;
+  tasksCreated: number;
+  idMapping: Record<string, string>;
+}
+
+export async function replayFromCheckpoint(
+  jobId: string,
+  options: ReplayOptions
+): Promise<ReplayResponse> {
+  const res = await fetch(`${API_BASE}/jobs/${jobId}/replay`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(options),
+  });
+  return handleResponse(res);
+}
+
+// ============ Cost Tracking APIs ============
+
+export interface TaskCost {
+  taskId: string;
+  taskName: string;
+  taskType: string;
+  status: string;
+  attempts: number;
+  tokens: {
+    input: number;
+    output: number;
+  };
+  estimatedCostUsd: number;
+}
+
+export interface JobCostResponse {
+  jobId: string;
+  jobName: string;
+  status: string;
+  summary: {
+    totalTasks: number;
+    completedTasks: number;
+    totalAttempts: number;
+    crashRecoveries: number;
+    tokens: {
+      input: number;
+      output: number;
+      total: number;
+    };
+    estimatedCostUsd: number;
+    savedByRecoveryUsd: number;
+  };
+  tasks: TaskCost[];
+  pricing: {
+    model: string;
+    inputPer1MTokens: number;
+    outputPer1MTokens: number;
+  };
+}
+
+export async function getJobCost(jobId: string): Promise<JobCostResponse> {
+  const res = await fetch(`${API_BASE}/jobs/${jobId}/cost`, {
+    headers: getHeaders(),
+  });
+  return handleResponse(res);
+}
+
 // ============ Tenant Management APIs ============
 
 export async function createTenant(

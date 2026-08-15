@@ -24,13 +24,12 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // Validate the API key by trying to fetch usage
       api.setStoredApiKey(apiKey.trim());
       await api.getUsage();
       router.push('/');
-    } catch (err) {
+    } catch {
       api.clearStoredApiKey();
-      setError('Invalid API key. Please check and try again.');
+      setError('Invalid API key');
     } finally {
       setIsLoading(false);
     }
@@ -41,29 +40,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-primary)' }}>
+      <div className="w-full max-w-sm animate-fade-in">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-              />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white">Crash-Proof Agent</h1>
-          <p className="text-gray-400 mt-1">Sign in to your workspace</p>
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-semibold mb-2" style={{ color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
+            x404-r
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            The runtime where context is never lost
+          </p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          {/* Error Message */}
+        {/* Card */}
+        <div className="rounded-2xl p-6" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', boxShadow: '0 4px 24px -8px rgba(0, 0, 0, 0.4)' }}>
+          {/* Error */}
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <div className="mb-5 p-3 rounded-lg text-sm animate-scale-in" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
               {error}
             </div>
           )}
@@ -71,7 +64,8 @@ export default function LoginPage() {
           {/* GitHub Login */}
           <button
             onClick={handleGitHubLogin}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors mb-4"
+            className="w-full flex items-center justify-center gap-2.5 py-3 rounded-lg text-sm font-medium"
+            style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path
@@ -84,64 +78,69 @@ export default function LoginPage() {
           </button>
 
           {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-700" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-800 text-gray-500">Or use API key</span>
-            </div>
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>or</span>
+            <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
           </div>
 
-          {/* API Key Login */}
-          <form onSubmit={handleApiKeyLogin}>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-2">API Key</label>
+          {/* API Key Form */}
+          <form onSubmit={handleApiKeyLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                API Key
+              </label>
               <input
-                type="text"
+                type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="af_..."
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                placeholder="x404r_..."
+                className="w-full px-3 py-2.5 rounded-lg text-sm font-mono outline-none transition-all focus:ring-2 focus:ring-blue-500/30"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                }}
               />
             </div>
+
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              disabled={isLoading || !apiKey.trim()}
+              className="w-full py-3 rounded-lg text-sm font-medium disabled:opacity-50"
+              style={{ background: 'var(--accent)', color: 'white' }}
             >
-              {isLoading ? 'Signing in...' : 'Sign in with API Key'}
+              {isLoading ? 'Verifying...' : 'Continue'}
             </button>
           </form>
 
           {/* Demo Mode */}
-          <div className="mt-6 pt-6 border-t border-gray-700 text-center">
-            <p className="text-sm text-gray-500 mb-3">
-              Don't have an account?
-            </p>
+          <div className="mt-6 pt-5 text-center" style={{ borderTop: '1px solid var(--border-subtle)' }}>
             <Link
               href="/"
-              className="text-blue-400 hover:text-blue-300 text-sm"
+              className="text-sm transition-colors hover:opacity-80"
+              style={{ color: 'var(--text-muted)' }}
             >
               Continue in Demo Mode
-            </Link>
-            <span className="text-gray-600 mx-2">|</span>
-            <Link
-              href="/admin"
-              className="text-blue-400 hover:text-blue-300 text-sm"
-            >
-              Create Workspace
             </Link>
           </div>
         </div>
 
-        {/* Help */}
-        <p className="text-center text-sm text-gray-500 mt-4">
-          Need help?{' '}
-          <a href="#" className="text-blue-400 hover:underline">
-            View documentation
-          </a>
-        </p>
+        {/* Footer */}
+        <div className="text-center mt-8 space-y-2">
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Crash-proof AI agents on CockroachDB
+          </p>
+          <div className="flex items-center justify-center gap-3 text-xs">
+            <Link href="/admin" className="transition-colors hover:opacity-80" style={{ color: 'var(--accent)' }}>
+              Admin
+            </Link>
+            <span style={{ color: 'var(--border-default)' }}>|</span>
+            <a href="https://github.com" className="transition-colors hover:opacity-80" style={{ color: 'var(--accent)' }}>
+              Docs
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

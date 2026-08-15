@@ -13,17 +13,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Crash-Proof Agent Dashboard",
-  description: "Resumable, CockroachDB-backed task executor visualization",
+  title: "x404-r | Context Never Lost",
+  description: "The runtime where AI agent context is never lost. Crash-proof execution on CockroachDB.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-gray-900">{children}</body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

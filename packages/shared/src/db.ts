@@ -1,4 +1,4 @@
-import { Pool, PoolConfig, QueryResult } from 'pg';
+import { Pool, PoolConfig, QueryResult, QueryResultRow } from 'pg';
 import type {
   Job,
   TaskNode,
@@ -29,7 +29,7 @@ export class Database {
     );
   }
 
-  async query<T = unknown>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
+  async query<T extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
     return this.pool.query<T>(text, params);
   }
 
