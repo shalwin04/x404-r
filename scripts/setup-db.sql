@@ -273,6 +273,73 @@ CREATE TABLE usage_monthly (
     INDEX idx_usage_monthly_period (billing_period)
 );
 
+-- ============ Metrics Snapshots Table (for SDK metrics persistence) ============
+
+-- Metrics snapshots: Periodic snapshots of SDK metrics for dashboard visualization
+CREATE TABLE metrics_snapshots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    -- Snapshot metadata
+    snapshot_type STRING NOT NULL DEFAULT 'periodic', -- 'periodic', 'flush', 'shutdown'
+    period_seconds INT NOT NULL DEFAULT 30,
+    -- Execution metrics
+    tasks_total INT DEFAULT 0,
+    tasks_completed INT DEFAULT 0,
+    tasks_failed INT DEFAULT 0,
+    tasks_pending INT DEFAULT 0,
+    tasks_running INT DEFAULT 0,
+    success_rate DECIMAL(5, 2) DEFAULT 0,
+    throughput_per_min DECIMAL(10, 4) DEFAULT 0,
+    -- Cost metrics
+    total_cost_usd DECIMAL(10, 6) DEFAULT 0,
+    tokens_input INT DEFAULT 0,
+    tokens_output INT DEFAULT 0,
+    -- Performance metrics (latencies in ms)
+    latency_p50_ms DECIMAL(10, 2) DEFAULT 0,
+    latency_p95_ms DECIMAL(10, 2) DEFAULT 0,
+    latency_p99_ms DECIMAL(10, 2) DEFAULT 0,
+    latency_avg_ms DECIMAL(10, 2) DEFAULT 0,
+    ai_latency_ms DECIMAL(10, 2) DEFAULT 0,
+    checkpoint_latency_ms DECIMAL(10, 2) DEFAULT 0,
+    -- Reliability metrics
+    crash_recoveries INT DEFAULT 0,
+    checkpoint_hit_rate DECIMAL(5, 2) DEFAULT 0,
+    -- AI metrics
+    ai_generations INT DEFAULT 0,
+    model_breakdown JSONB DEFAULT '{}',
+    -- Memory metrics
+    memory_vectors_stored INT DEFAULT 0,
+    avg_retrieval_relevance DECIMAL(7, 4) DEFAULT 0, -- 0-100 scale (percentage)
+    -- Full metrics snapshot (for detailed analysis)
+    full_snapshot JSONB,
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT now(),
+    INDEX idx_metrics_tenant (tenant_id),
+    INDEX idx_metrics_tenant_time (tenant_id, created_at DESC),
+    INDEX idx_metrics_type (snapshot_type),
+    INDEX idx_metrics_created (created_at DESC)
+);
+
+-- Aggregated metrics view for fast dashboard queries
+CREATE VIEW metrics_hourly AS
+SELECT
+    tenant_id,
+    date_trunc('hour', created_at) as hour,
+    AVG(tasks_completed)::INT as avg_tasks_completed,
+    AVG(tasks_failed)::INT as avg_tasks_failed,
+    AVG(success_rate) as avg_success_rate,
+    AVG(throughput_per_min) as avg_throughput,
+    SUM(total_cost_usd) as total_cost,
+    AVG(latency_p50_ms) as avg_latency_p50,
+    AVG(latency_p95_ms) as avg_latency_p95,
+    AVG(ai_latency_ms) as avg_ai_latency,
+    SUM(ai_generations) as total_ai_generations,
+    SUM(tokens_input) as total_tokens_input,
+    SUM(tokens_output) as total_tokens_output,
+    COUNT(*) as snapshot_count
+FROM metrics_snapshots
+GROUP BY tenant_id, date_trunc('hour', created_at);
+
 -- ============ Views ============
 
 -- Job progress view (includes tenant_id)

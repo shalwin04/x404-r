@@ -86,6 +86,27 @@ export {
 } from './chaos.js';
 export type { ChaosConfig, ChaosFailureType } from './chaos.js';
 
+// Metrics & Observability
+export {
+  MetricsCollector,
+  Histogram,
+  RateCalculator,
+  metrics,
+  observe,
+  withMetrics,
+} from './metrics.js';
+export type {
+  MetricEvent,
+  MetricsSummary,
+  MetricsDatabaseConfig,
+  ExecutionMetrics,
+  CostMetrics,
+  PerformanceMetrics,
+  ReliabilityMetrics,
+  AIMetrics,
+  MemoryMetrics,
+} from './metrics.js';
+
 // Types
 export type {
   // Core types

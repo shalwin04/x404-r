@@ -435,9 +435,15 @@ export class AgentDB {
         context_summary as summary,
         event_type,
         resolution,
-        (SELECT SUM(a * b) FROM UNNEST(embedding, ${embeddingStr}) AS t(a, b)) /
-        (SQRT((SELECT SUM(a * a) FROM UNNEST(embedding) AS t(a))) *
-         SQRT((SELECT SUM(b * b) FROM UNNEST(${embeddingStr}) AS t(b)))) AS similarity
+        COALESCE(
+          (SELECT SUM(a * b) FROM UNNEST(embedding, ${embeddingStr}) AS t(a, b)) /
+          NULLIF(
+            SQRT((SELECT SUM(a * a) FROM UNNEST(embedding) AS t(a))) *
+            SQRT((SELECT SUM(b * b) FROM UNNEST(${embeddingStr}) AS t(b))),
+            0
+          ),
+          0
+        ) AS similarity
       FROM memory_vectors
       WHERE tenant_id = $1
     `;

@@ -36,7 +36,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-6">
             <a href="#features" className="text-sm" style={{ color: 'var(--text-muted)' }}>Features</a>
             <a href="#authentication" className="text-sm" style={{ color: 'var(--text-muted)' }}>Auth</a>
-            <a href="#data-usage" className="text-sm" style={{ color: 'var(--text-muted)' }}>Data Policy</a>
+            <Link href="/monitor" className="text-sm" style={{ color: 'var(--text-muted)' }}>Monitor</Link>
             <Link href="/dashboard" className="text-sm" style={{ color: 'var(--text-muted)' }}>Dashboard</Link>
             <Link
               href="/dashboard"
@@ -70,11 +70,11 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
-              href="/dashboard"
+              href="/create"
               className="px-6 py-3 rounded-lg text-base font-medium"
               style={{ background: 'var(--accent)', color: 'white' }}
             >
-              Try Live Demo
+              Create Agent
             </Link>
             <button
               onClick={copyInstall}

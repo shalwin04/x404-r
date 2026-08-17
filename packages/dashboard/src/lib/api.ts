@@ -136,16 +136,24 @@ export async function getJob(jobId: string): Promise<JobResponse> {
   return handleResponse(res);
 }
 
-export async function createJob(
-  name: string,
-  taskDescription: string,
-  context?: Record<string, unknown>,
-  priority?: number
-): Promise<CreateJobResponse> {
+export interface CreateJobInput {
+  name: string;
+  description?: string;
+  taskDescription?: string;
+  context?: Record<string, unknown>;
+  priority?: number;
+}
+
+export async function createJob(input: CreateJobInput): Promise<CreateJobResponse> {
   const res = await fetch(`${API_BASE}/jobs`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ name, taskDescription, context, priority }),
+    body: JSON.stringify({
+      name: input.name,
+      taskDescription: input.description || input.taskDescription || input.name,
+      context: input.context,
+      priority: input.priority,
+    }),
   });
   return handleResponse(res);
 }

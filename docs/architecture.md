@@ -363,6 +363,131 @@ CREATE TABLE audit_logs (
 
 ---
 
+## Metrics & Observability
+
+### Hybrid Metrics Flow
+
+The system uses a hybrid approach combining derived metrics (from database state) with SDK-persisted snapshots:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Metrics Architecture                               │
+│                                                                              │
+│   SDK User Application                                                       │
+│   ┌─────────────────────────────────────────────────────────┐               │
+│   │  const metrics = new MetricsCollector();                │               │
+│   │  metrics.setDatabase({ pool, tenantId, flushIntervalMs: 30000 });       │
+│   │                                                         │               │
+│   │  // In-memory tracking                                  │               │
+│   │  metrics.taskStarted(id, type, workflowId);            │               │
+│   │  metrics.taskCompleted(id, type, workflowId);          │               │
+│   │  metrics.aiTokensUsed('gemini', 500, 200);             │               │
+│   │                                                         │               │
+│   │  // Automatic flush every 30s → CockroachDB            │               │
+│   └────────────────────────┬────────────────────────────────┘               │
+│                            │ flush()                                         │
+│                            ▼                                                 │
+│   ┌─────────────────────────────────────────────────────────┐               │
+│   │                    CockroachDB                          │               │
+│   │  ┌─────────────────┐  ┌─────────────────────────────┐  │               │
+│   │  │ metrics_snapshots│  │ task_nodes, jobs, checkpoints│  │               │
+│   │  │ (SDK snapshots) │  │ (live state)                │  │               │
+│   │  └────────┬────────┘  └──────────────┬──────────────┘  │               │
+│   │           │                          │                  │               │
+│   └───────────┼──────────────────────────┼──────────────────┘               │
+│               │                          │                                   │
+│               ▼                          ▼                                   │
+│   ┌─────────────────────────────────────────────────────────┐               │
+│   │                    API Server                            │               │
+│   │  GET /metrics         → Derived from live state         │               │
+│   │  GET /metrics/history → SDK snapshots (time-series)     │               │
+│   └────────────────────────┬────────────────────────────────┘               │
+│                            │                                                 │
+│                            ▼                                                 │
+│   ┌─────────────────────────────────────────────────────────┐               │
+│   │                    Dashboard                             │               │
+│   │  • Real-time metrics (derived)                          │               │
+│   │  • Historical trends (SDK snapshots)                    │               │
+│   │  • Per-task latency, AI costs, reliability             │               │
+│   └─────────────────────────────────────────────────────────┘               │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### SDK Usage for Metrics
+
+```typescript
+import { MetricsCollector } from '@x404-r/sdk';
+import { Pool } from 'pg';
+
+// Create collector with database persistence
+const metrics = new MetricsCollector();
+
+metrics.setDatabase({
+  pool: new Pool({ connectionString: process.env.DATABASE_URL }),
+  tenantId: 'your-tenant-id',
+  flushIntervalMs: 30000,  // Flush every 30 seconds
+  enabled: true,
+});
+
+// Track metrics during execution
+metrics.taskStarted(taskId, taskType, workflowId);
+metrics.aiTokensUsed('gemini-2.5-flash', inputTokens, outputTokens);
+metrics.taskCompleted(taskId, taskType, workflowId);
+
+// Get in-memory summary
+const summary = metrics.getSummary();
+
+// Query historical metrics
+const history = await metrics.getHistory({ hours: 24 });
+const hourly = await metrics.getHourlyMetrics(24);
+
+// Graceful shutdown
+await metrics.shutdown();
+```
+
+### Metrics Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /metrics` | Real-time derived metrics from database state |
+| `GET /metrics/history?hours=24&granularity=hourly` | Aggregated hourly metrics |
+| `GET /metrics/history?hours=1&granularity=raw` | Raw SDK snapshots |
+
+### Metrics Schema
+
+```sql
+CREATE TABLE metrics_snapshots (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    snapshot_type STRING,  -- 'periodic', 'flush', 'shutdown'
+
+    -- Execution metrics
+    tasks_completed INT,
+    tasks_failed INT,
+    success_rate DECIMAL,
+    throughput_per_min DECIMAL,
+
+    -- Cost metrics
+    total_cost_usd DECIMAL,
+    tokens_input INT,
+    tokens_output INT,
+
+    -- Performance metrics
+    latency_p50_ms DECIMAL,
+    latency_p95_ms DECIMAL,
+    latency_p99_ms DECIMAL,
+    ai_latency_ms DECIMAL,
+
+    -- Full snapshot for detailed analysis
+    full_snapshot JSONB,
+
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+---
+
 ## Summary: Key Design Decisions
 
 | Decision | Choice | Rationale |

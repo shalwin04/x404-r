@@ -26,7 +26,7 @@ export interface DecomposeInput {
 export async function decompose(input: DecomposeInput): Promise<DecompositionResult> {
   const prompt = buildDecomposePrompt(input.taskDescription, input.context);
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   const result = await model.generateContent(prompt);
   const response = result.response.text();
 
