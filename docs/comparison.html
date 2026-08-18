@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>x404-r SDK Comparison</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      padding: 40px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 48px;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 20px;
+      margin-bottom: 50px;
+    }
+
+    .highlight {
+      color: #00ff88;
+    }
+
+    .red {
+      color: #ff4444;
+    }
+
+    .comparison-container {
+      display: grid;
+      grid-template-columns: 1fr 100px 1fr;
+      gap: 30px;
+      margin-bottom: 60px;
+    }
+
+    .side {
+      background: #111;
+      border-radius: 20px;
+      padding: 40px;
+      border: 3px solid #333;
+    }
+
+    .side.bad {
+      border-color: #ff4444;
+      background: linear-gradient(180deg, #1a0a0a 0%, #111 100%);
+    }
+
+    .side.good {
+      border-color: #00ff88;
+      background: linear-gradient(180deg, #0a1a0a 0%, #111 100%);
+    }
+
+    .vs {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 700;
+      color: #666;
+    }
+
+    .side-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .side-icon {
+      font-size: 48px;
+    }
+
+    .side-title {
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .side-subtitle {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .scenario {
+      margin-bottom: 40px;
+    }
+
+    .scenario-title {
+      font-size: 18px;
+      color: #666;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px;
+      background: #1a1a1a;
+      border-radius: 10px;
+      border-left: 4px solid #333;
+    }
+
+    .step.done {
+      border-left-color: #00ff88;
+    }
+
+    .step.crashed {
+      border-left-color: #ff4444;
+      background: #2a1515;
+    }
+
+    .step.resumed {
+      border-left-color: #00ff88;
+      background: #152a1a;
+    }
+
+    .step.lost {
+      border-left-color: #333;
+      opacity: 0.4;
+    }
+
+    .step-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .step-icon.done {
+      background: #00ff88;
+      color: #000;
+    }
+
+    .step-icon.crashed {
+      background: #ff4444;
+      color: #fff;
+    }
+
+    .step-icon.pending {
+      background: #333;
+      color: #666;
+    }
+
+    .step-text {
+      flex: 1;
+    }
+
+    .step-name {
+      font-weight: 500;
+    }
+
+    .step-detail {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .progress-section {
+      margin: 30px 0;
+    }
+
+    .progress-bar {
+      height: 40px;
+      background: #222;
+      border-radius: 20px;
+      overflow: hidden;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: #000;
+      transition: width 0.5s ease;
+    }
+
+    .progress-fill.red {
+      background: linear-gradient(90deg, #ff4444, #ff6666);
+    }
+
+    .progress-fill.green {
+      background: linear-gradient(90deg, #00ff88, #00cc6a);
+    }
+
+    .crash-marker {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #ff4444;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    .stat-card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+    }
+
+    .stat-value.bad {
+      color: #ff4444;
+    }
+
+    .stat-value.good {
+      color: #00ff88;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 0;
+      border-top: 1px solid #333;
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    .savings-banner {
+      background: linear-gradient(135deg, #00ff8820, #00cc6a10);
+      border: 2px solid #00ff88;
+      border-radius: 16px;
+      padding: 30px 50px;
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .savings-title {
+      font-size: 24px;
+      color: #00ff88;
+      margin-bottom: 20px;
+    }
+
+    .savings-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 30px;
+    }
+
+    .savings-item {
+      text-align: center;
+    }
+
+    .savings-value {
+      font-size: 42px;
+      font-weight: 700;
+      color: #00ff88;
+    }
+
+    .savings-label {
+      font-size: 14px;
+      color: #888;
+      margin-top: 5px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #333;
+    }
+
+    .footer-logo {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .footer-tagline {
+      color: #888;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Traditional Agent <span class="red">vs</span> <span class="highlight">x404-r</span></h1>
+    <p class="subtitle">Same task. Same 2 crashes. Very different results.</p>
+
+    <div class="comparison-container">
+      <!-- LEFT: Without x404-r -->
+      <div class="side bad">
+        <div class="side-header">
+          <span class="side-icon">❌</span>
+          <div>
+            <div class="side-title">Traditional Agent</div>
+            <div class="side-subtitle">State stored in memory (RAM)</div>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">Execution Timeline</div>
+          <div class="timeline">
+            <div class="step done">
+              <div class="step-icon done">✓</div>
+              <div class="step-text">
+                <div class="step-name">Process documents 1-75</div>
+                <div class="step-detail">3,500 tokens used</div>
+              </div>
+            </div>
+            <div class="step crashed">
+              <div class="step-icon crashed">💥</div>
+              <div class="step-text">
+                <div class="step-name" style="color: #ff4444;">CRASH #1 - Memory overflow</div>
+                <div class="step-detail">All progress lost. Restart from 0.</div>
+              </div>
+            </div>
+            <div class="step done">
+              <div class="step-icon done">✓</div>
+              <div class="step-text">
+                <div class="step-name">Re-process documents 1-60</div>
+                <div class="step-detail">2,800 tokens used (duplicate work)</div>
+              </div>
+            </div>
+            <div class="step crashed">
+              <div class="step-icon crashed">💥</div>
+              <div class="step-text">
+                <div class="step-name" style="color: #ff4444;">CRASH #2 - Network timeout</div>
+                <div class="step-detail">All progress lost. Restart from 0.</div>
+              </div>
+            </div>
+            <div class="step done">
+              <div class="step-icon done">✓</div>
+              <div class="step-text">
+                <div class="step-name">Re-process documents 1-100</div>
+                <div class="step-detail">4,700 tokens used (duplicate work)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="progress-section">
+          <div class="scenario-title">Progress After Each Crash</div>
+          <div style="position: relative;">
+            <div class="progress-bar">
+              <div class="progress-fill red" style="width: 75%;">75%</div>
+            </div>
+            <div class="crash-marker" style="left: 75%;">CRASH → 0%</div>
+          </div>
+          <div style="position: relative; margin-top: 20px;">
+            <div class="progress-bar">
+              <div class="progress-fill red" style="width: 60%;">60%</div>
+            </div>
+            <div class="crash-marker" style="left: 60%;">CRASH → 0%</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill red" style="width: 100%;">100% ✓</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value bad">235</div>
+            <div class="stat-label">Total API Calls</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value bad">11,000</div>
+            <div class="stat-label">Tokens Used</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value bad">$11.00</div>
+            <div class="stat-label">Total Cost</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value bad">4.5 hrs</div>
+            <div class="stat-label">Time Spent</div>
+          </div>
+        </div>
+
+        <div class="total-row">
+          <span>Work wasted on restarts:</span>
+          <span class="red" style="font-weight: 700;">135 calls • 6,300 tokens • $6.30</span>
+        </div>
+      </div>
+
+      <!-- VS Column -->
+      <div class="vs">VS</div>
+
+      <!-- RIGHT: With x404-r -->
+      <div class="side good">
+        <div class="side-header">
+          <span class="side-icon">✅</span>
+          <div>
+            <div class="side-title">x404-r Agent</div>
+            <div class="side-subtitle">State stored in CockroachDB</div>
+          </div>
+        </div>
+
+        <div class="scenario">
+          <div class="scenario-title">Execution Timeline</div>
+          <div class="timeline">
+            <div class="step done">
+              <div class="step-icon done">✓</div>
+              <div class="step-text">
+                <div class="step-name">Process documents 1-75 + checkpoint</div>
+                <div class="step-detail">3,500 tokens used • checkpoint saved</div>
+              </div>
+            </div>
+            <div class="step crashed">
+              <div class="step-icon crashed">💥</div>
+              <div class="step-text">
+                <div class="step-name" style="color: #ff4444;">CRASH #1 - Same error</div>
+                <div class="step-detail">Checkpoint preserved in CockroachDB</div>
+              </div>
+            </div>
+            <div class="step resumed">
+              <div class="step-icon done">↻</div>
+              <div class="step-text">
+                <div class="step-name" style="color: #00ff88;">Resume from checkpoint (doc 75)</div>
+                <div class="step-detail">Continue to doc 95 • 950 tokens</div>
+              </div>
+            </div>
+            <div class="step crashed">
+              <div class="step-icon crashed">💥</div>
+              <div class="step-text">
+                <div class="step-name" style="color: #ff4444;">CRASH #2 - Same error</div>
+                <div class="step-detail">Checkpoint preserved in CockroachDB</div>
+              </div>
+            </div>
+            <div class="step resumed">
+              <div class="step-icon done">↻</div>
+              <div class="step-text">
+                <div class="step-name" style="color: #00ff88;">Resume from checkpoint (doc 95)</div>
+                <div class="step-detail">Complete remaining 5 docs • 250 tokens</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="progress-section">
+          <div class="scenario-title">Progress After Each Crash</div>
+          <div style="position: relative;">
+            <div class="progress-bar">
+              <div class="progress-fill green" style="width: 75%;">75%</div>
+            </div>
+            <div class="crash-marker" style="left: 75%; background: #00ff88; color: #000;">CRASH → Resume 75%</div>
+          </div>
+          <div style="position: relative; margin-top: 20px;">
+            <div class="progress-bar">
+              <div class="progress-fill green" style="width: 95%;">95%</div>
+            </div>
+            <div class="crash-marker" style="left: 95%; background: #00ff88; color: #000;">CRASH → Resume 95%</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill green" style="width: 100%;">100% ✓</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value good">100</div>
+            <div class="stat-label">Total API Calls</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value good">4,700</div>
+            <div class="stat-label">Tokens Used</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value good">$4.70</div>
+            <div class="stat-label">Total Cost</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value good">1.8 hrs</div>
+            <div class="stat-label">Time Spent</div>
+          </div>
+        </div>
+
+        <div class="total-row">
+          <span>Work wasted on restarts:</span>
+          <span class="highlight" style="font-weight: 700;">0 calls • 0 tokens • $0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Savings Banner -->
+    <div class="savings-banner">
+      <div class="savings-title">x404-r Savings (This Task)</div>
+      <div class="savings-grid">
+        <div class="savings-item">
+          <div class="savings-value">57%</div>
+          <div class="savings-label">Fewer API Calls</div>
+        </div>
+        <div class="savings-item">
+          <div class="savings-value">57%</div>
+          <div class="savings-label">Fewer Tokens</div>
+        </div>
+        <div class="savings-item">
+          <div class="savings-value">$6.30</div>
+          <div class="savings-label">Cost Saved</div>
+        </div>
+        <div class="savings-item">
+          <div class="savings-value">2.7 hrs</div>
+          <div class="savings-label">Time Saved</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-logo">x404-r</div>
+      <div class="footer-tagline">Context is never lost. That's the promise.</div>
+    </div>
+  </div>
+</body>
+</html>
