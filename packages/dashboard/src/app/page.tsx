@@ -137,121 +137,196 @@ const result = await workflow.run({ items }, { wait: true });`}</code>
         </div>
       </section>
 
-      {/* Real Comparison Results */}
+      {/* Interactive Comparison Demo */}
       <section id="comparison" className="py-20 px-6" style={{ background: 'var(--bg-secondary)' }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4" style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
-              <span className="text-xs font-medium" style={{ color: 'var(--success)' }}>REAL BENCHMARK</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <span className="text-xs font-medium" style={{ color: 'var(--error)' }}>CRASH TEST</span>
             </div>
             <h2 className="text-3xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
-              Live Comparison Results
+              What happens when your agent crashes?
             </h2>
             <p className="max-w-2xl mx-auto" style={{ color: 'var(--text-muted)' }}>
-              Same 5-step AI task. Same crash at step 3. Real Gemini API calls. See the difference.
+              Same 5-step workflow. Same crash at step 3. Watch the difference.
             </p>
           </div>
 
-          {/* Comparison Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* x404-r SDK Results */}
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-primary)', border: '2px solid var(--success)' }}>
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl">✅</span>
-                <div>
-                  <h3 className="text-xl font-semibold">x404-r SDK</h3>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>With checkpoints</p>
+          {/* Side-by-Side Race Visualization */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+            {/* x404-r Side */}
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-subtle)', background: 'rgba(34, 197, 94, 0.05)' }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--success)' }}></div>
+                  <span className="font-semibold" style={{ color: 'var(--success)' }}>x404-r SDK</span>
                 </div>
+                <span className="text-xs px-2 py-1 rounded-full font-mono" style={{ background: 'rgba(34, 197, 94, 0.1)', color: 'var(--success)' }}>Crash-proof</span>
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total AI Calls</span>
-                  <span className="font-bold text-lg" style={{ color: 'var(--success)' }}>5</span>
+              <div className="p-5">
+                {/* Task Steps */}
+                <div className="space-y-3 mb-6">
+                  {['Parse input', 'Analyze code', 'Generate plan', 'Apply changes', 'Verify output'].map((step, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{
+                        background: i < 3 ? 'var(--success)' : i === 2 ? 'rgba(34, 197, 94, 0.2)' : 'var(--bg-elevated)',
+                        color: i < 3 ? 'white' : 'var(--text-muted)',
+                        border: i === 2 ? '2px solid var(--success)' : 'none'
+                      }}>
+                        {i < 2 ? '✓' : i === 2 ? '↻' : i + 1}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm" style={{ color: i <= 2 ? 'var(--text-primary)' : 'var(--text-muted)' }}>{step}</span>
+                          {i === 2 && <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: 'rgba(34, 197, 94, 0.1)', color: 'var(--success)' }}>checkpoint saved</span>}
+                        </div>
+                        <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
+                          <div className="h-full rounded-full transition-all duration-500" style={{
+                            background: i < 2 ? 'var(--success)' : i === 2 ? 'linear-gradient(90deg, var(--success), var(--accent))' : 'transparent',
+                            width: i < 2 ? '100%' : i === 2 ? '60%' : '0%'
+                          }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Wasted AI Calls</span>
-                  <span className="font-bold text-lg" style={{ color: 'var(--success)' }}>0</span>
+
+                {/* Crash Event */}
+                <div className="p-3 rounded-xl mb-4 flex items-center gap-3" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  <span className="text-xl">💥</span>
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--error)' }}>Worker crashed at step 3</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>OOM / timeout / network error</div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Tokens</span>
-                  <span className="font-bold" style={{ color: 'var(--success)' }}>12,609</span>
-                </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Wasted Tokens</span>
-                  <span className="font-bold" style={{ color: 'var(--success)' }}>250</span>
-                </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Cost</span>
-                  <span className="font-bold" style={{ color: 'var(--success)' }}>$0.00352</span>
-                </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Time</span>
-                  <span className="font-bold" style={{ color: 'var(--success)' }}>90.2s</span>
+
+                {/* Recovery */}
+                <div className="p-3 rounded-xl flex items-center gap-3" style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                  <span className="text-xl">✨</span>
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--success)' }}>Resumed from checkpoint</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>New worker picked up at step 3, 60% complete</div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Vanilla Results */}
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-primary)', border: '2px solid var(--error)' }}>
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl">❌</span>
-                <div>
-                  <h3 className="text-xl font-semibold">Vanilla Agent</h3>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No checkpoints</p>
+            {/* Vanilla Side */}
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-subtle)', background: 'rgba(239, 68, 68, 0.05)' }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--error)' }}></div>
+                  <span className="font-semibold" style={{ color: 'var(--error)' }}>Traditional Agent</span>
                 </div>
+                <span className="text-xs px-2 py-1 rounded-full font-mono" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--error)' }}>No checkpoints</span>
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total AI Calls</span>
-                  <span className="font-bold text-lg" style={{ color: 'var(--error)' }}>7</span>
+              <div className="p-5">
+                {/* Task Steps - First attempt */}
+                <div className="space-y-3 mb-6">
+                  {['Parse input', 'Analyze code', 'Generate plan', 'Apply changes', 'Verify output'].map((step, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{
+                        background: i < 2 ? 'var(--text-muted)' : 'var(--bg-elevated)',
+                        color: i < 2 ? 'white' : 'var(--text-muted)',
+                        textDecoration: i < 2 ? 'line-through' : 'none',
+                        opacity: i < 3 ? 0.5 : 1
+                      }}>
+                        {i < 2 ? '✓' : i + 1}
+                      </div>
+                      <div className="flex-1" style={{ opacity: i < 3 ? 0.5 : 1 }}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm" style={{ color: 'var(--text-muted)', textDecoration: i < 3 ? 'line-through' : 'none' }}>{step}</span>
+                          {i < 2 && <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--error)' }}>wasted</span>}
+                        </div>
+                        <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
+                          <div className="h-full rounded-full" style={{
+                            background: i < 2 ? 'var(--text-muted)' : 'transparent',
+                            width: i < 2 ? '100%' : '0%'
+                          }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Wasted AI Calls</span>
-                  <span className="font-bold text-lg" style={{ color: 'var(--error)' }}>2</span>
+
+                {/* Crash Event */}
+                <div className="p-3 rounded-xl mb-4 flex items-center gap-3" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  <span className="text-xl">💥</span>
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--error)' }}>Worker crashed at step 3</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>All progress lost!</div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Tokens</span>
-                  <span className="font-bold" style={{ color: 'var(--error)' }}>19,469</span>
-                </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Wasted Tokens</span>
-                  <span className="font-bold" style={{ color: 'var(--error)' }}>3,889</span>
-                </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Cost</span>
-                  <span className="font-bold" style={{ color: 'var(--error)' }}>$0.00558</span>
-                </div>
-                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Time</span>
-                  <span className="font-bold" style={{ color: 'var(--error)' }}>184.9s</span>
+
+                {/* Restart */}
+                <div className="p-3 rounded-xl flex items-center gap-3" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                  <span className="text-xl">🔄</span>
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: 'var(--warning)' }}>Restarting from scratch</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Must redo steps 1-2 (2 AI calls wasted)</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Key Difference */}
-          <div className="p-6 rounded-2xl text-center" style={{ background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05))', border: '2px solid var(--success)' }}>
-            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--success)' }}>KEY DIFFERENCE</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <div className="text-4xl font-bold" style={{ color: 'var(--success)' }}>2 calls</div>
-                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>AI Calls Saved (29% fewer)</div>
+          {/* Results Comparison */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="p-5 rounded-2xl text-center" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="text-2xl font-bold" style={{ color: 'var(--success)' }}>5</span>
+                <span className="text-lg" style={{ color: 'var(--text-muted)' }}>vs</span>
+                <span className="text-2xl font-bold" style={{ color: 'var(--error)' }}>7</span>
               </div>
-              <div>
-                <div className="text-4xl font-bold" style={{ color: 'var(--success)' }}>3,639</div>
-                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Tokens Not Wasted</div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>AI Calls</div>
+            </div>
+            <div className="p-5 rounded-2xl text-center" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="text-2xl font-bold" style={{ color: 'var(--success)' }}>12.6k</span>
+                <span className="text-lg" style={{ color: 'var(--text-muted)' }}>vs</span>
+                <span className="text-2xl font-bold" style={{ color: 'var(--error)' }}>19.5k</span>
               </div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Tokens</div>
+            </div>
+            <div className="p-5 rounded-2xl text-center" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="text-2xl font-bold" style={{ color: 'var(--success)' }}>90s</span>
+                <span className="text-lg" style={{ color: 'var(--text-muted)' }}>vs</span>
+                <span className="text-2xl font-bold" style={{ color: 'var(--error)' }}>185s</span>
+              </div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Time</div>
+            </div>
+            <div className="p-5 rounded-2xl text-center" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="text-2xl font-bold" style={{ color: 'var(--success)' }}>$0.004</span>
+                <span className="text-lg" style={{ color: 'var(--text-muted)' }}>vs</span>
+                <span className="text-2xl font-bold" style={{ color: 'var(--error)' }}>$0.006</span>
+              </div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Cost</div>
             </div>
           </div>
 
-          {/* Takeaway */}
-          <div className="mt-8 p-6 rounded-2xl" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-            <h3 className="text-center font-semibold mb-4">THE TAKEAWAY</h3>
-            <div className="text-center space-y-2">
-              <p><span style={{ color: 'var(--error)' }}>❌ Vanilla:</span> Wasted 2 AI calls, must redo ALL 5 steps</p>
-              <p><span style={{ color: 'var(--success)' }}>✅ x404-r:</span> Wasted 0 AI calls, resumed from checkpoint</p>
-              <p className="mt-4 font-semibold" style={{ color: 'var(--success)' }}>x404-r SDK ensures context is NEVER lost.</p>
+          {/* Savings Banner */}
+          <div className="p-6 rounded-2xl text-center" style={{ background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+              <div>
+                <div className="text-4xl font-bold mb-1" style={{ color: 'var(--success)' }}>29%</div>
+                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Fewer AI calls</div>
+              </div>
+              <div className="hidden md:block w-px h-12" style={{ background: 'var(--border-subtle)' }}></div>
+              <div>
+                <div className="text-4xl font-bold mb-1" style={{ color: 'var(--success)' }}>35%</div>
+                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Tokens saved</div>
+              </div>
+              <div className="hidden md:block w-px h-12" style={{ background: 'var(--border-subtle)' }}></div>
+              <div>
+                <div className="text-4xl font-bold mb-1" style={{ color: 'var(--success)' }}>2x</div>
+                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Faster recovery</div>
+              </div>
             </div>
+            <p className="mt-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Real benchmark with Gemini 2.5 Flash. Traditional agent wasted 2 AI calls; x404-r wasted zero.
+            </p>
           </div>
         </div>
       </section>
