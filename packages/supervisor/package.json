@@ -4,9 +4,9 @@
   "main": "./dist/handler.js",
   "types": "./dist/handler.d.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "bundle": "esbuild src/handler.ts --bundle --platform=node --target=node18 --outfile=dist/handler.js --external:pg-native"
+    "build": "esbuild src/handler.ts --bundle --platform=node --target=node20 --outfile=dist/handler.js --external:pg-native",
+    "build:types": "tsc",
+    "dev": "tsc --watch"
   },
   "dependencies": {
     "@crash-proof/shared": "*",

@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>x404-r Detailed Architecture</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0a0a0f;
+      color: #e2e8f0;
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      background: linear-gradient(90deg, #00d4ff, #7c3aed, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      margin-bottom: 40px;
+      font-size: 1.1rem;
+    }
+
+    /* Section Styling */
+    .section {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 1.4rem;
+      color: #f472b6;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background: linear-gradient(180deg, #7c3aed, #f472b6);
+      border-radius: 2px;
+    }
+
+    /* Flow Diagram */
+    .flow-container {
+      overflow-x: auto;
+      padding: 20px 0;
+    }
+
+    .flow {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      min-width: max-content;
+    }
+
+    .flow-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .flow-box.highlight {
+      border-color: #4ade80;
+      box-shadow: 0 0 20px rgba(74, 222, 128, 0.1);
+    }
+
+    .flow-box-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .flow-box-content {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    .flow-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 80px;
+      color: #64748b;
+      font-size: 0.7rem;
+      text-align: center;
+    }
+
+    .flow-arrow .arrow {
+      font-size: 1.5rem;
+      color: #475569;
+      margin: 5px 0;
+    }
+
+    .flow-arrow .label {
+      background: rgba(99, 102, 241, 0.2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: #a5b4fc;
+      white-space: nowrap;
+    }
+
+    /* Code blocks */
+    .code {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Fira Code', 'Monaco', monospace;
+      font-size: 0.75rem;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    .code .keyword { color: #c084fc; }
+    .code .string { color: #4ade80; }
+    .code .comment { color: #64748b; }
+    .code .function { color: #60a5fa; }
+    .code .number { color: #fb923c; }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-aws { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
+    .tag-crdb { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
+    .tag-sdk { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+    .tag-input { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+    .tag-output { background: rgba(244, 114, 182, 0.2); color: #f472b6; }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.03);
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+    }
+
+    td {
+      color: #cbd5e1;
+    }
+
+    tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Grid layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    /* Component cards */
+    .component-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .component-card h4 {
+      color: #fff;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .component-card p {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      margin-bottom: 15px;
+    }
+
+    .io-list {
+      font-size: 0.8rem;
+    }
+
+    .io-list .input, .io-list .output {
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .io-list .input {
+      background: rgba(96, 165, 250, 0.1);
+      border-left: 3px solid #60a5fa;
+    }
+
+    .io-list .output {
+      background: rgba(244, 114, 182, 0.1);
+      border-left: 3px solid #f472b6;
+    }
+
+    .io-label {
+      font-weight: 600;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .io-label.in { color: #60a5fa; }
+    .io-label.out { color: #f472b6; }
+
+    /* Vertical flow */
+    .vertical-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .vertical-flow .step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .vertical-flow .step-number {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #7c3aed, #f472b6);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .vertical-flow .step-content {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 15px;
+    }
+
+    .vertical-flow .step-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .vertical-flow .step-desc {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    /* Database schema */
+    .schema-table {
+      background: rgba(74, 222, 128, 0.05);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .schema-table .table-name {
+      background: rgba(74, 222, 128, 0.1);
+      padding: 10px 15px;
+      font-weight: 600;
+      color: #4ade80;
+      border-bottom: 1px solid rgba(74, 222, 128, 0.2);
+    }
+
+    .schema-table .columns {
+      padding: 10px 15px;
+    }
+
+    .schema-table .column {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      font-size: 0.8rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .schema-table .column:last-child {
+      border-bottom: none;
+    }
+
+    .schema-table .col-name {
+      color: #e2e8f0;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .schema-table .col-type {
+      color: #64748b;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.75rem;
+    }
+
+    .schema-table .col-pk {
+      color: #fbbf24;
+    }
+
+    .schema-table .col-fk {
+      color: #60a5fa;
+    }
+
+    /* API endpoint */
+    .api-endpoint {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      margin-bottom: 15px;
+      overflow: hidden;
+    }
+
+    .api-endpoint .method-path {
+      padding: 12px 15px;
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .api-endpoint .method {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .method.get { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
+    .method.post { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+    .method.delete { background: rgba(248, 113, 113, 0.2); color: #f87171; }
+
+    .api-endpoint .path {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.9rem;
+    }
+
+    .api-endpoint .details {
+      padding: 15px;
+    }
+
+    .api-endpoint .desc {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+    }
+
+    .api-endpoint .req-res {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .api-endpoint .req, .api-endpoint .res {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .api-endpoint .req-res-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .api-endpoint .req .req-res-title { color: #60a5fa; }
+    .api-endpoint .res .req-res-title { color: #4ade80; }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      margin: 30px 0;
+    }
+
+    /* Highlight box */
+    .highlight-box {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(244, 114, 182, 0.1));
+      border: 1px solid rgba(167, 139, 250, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+
+    .highlight-box h4 {
+      color: #a78bfa;
+      margin-bottom: 10px;
+    }
+
+    /* SQL */
+    .sql {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    .sql .keyword { color: #c084fc; }
+    .sql .table { color: #4ade80; }
+    .sql .column { color: #60a5fa; }
+    .sql .string { color: #fbbf24; }
+    .sql .comment { color: #64748b; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>x404-r</h1>
+    <p class="subtitle">Complete System Architecture — Inputs, Outputs, Data Flows</p>
+
+    <!-- SECTION 1: HIGH LEVEL OVERVIEW -->
+    <div class="section">
+      <h2 class="section-title">System Overview</h2>
+
+      <div class="flow-container">
+        <div class="flow">
+          <div class="flow-box">
+            <div class="flow-box-title">
+              <span>👤</span> Developer / Application
+            </div>
+            <div class="flow-box-content">
+              Uses SDK to define workflows and submit jobs
+            </div>
+            <div class="code">
+<span class="keyword">import</span> { x404r } <span class="keyword">from</span> <span class="string">'@shalwin04/x404r-sdk'</span>;
+
+<span class="keyword">const</span> runtime = <span class="keyword">new</span> <span class="function">x404r</span>({
+  connectionString: <span class="string">'...'</span>,
+  ai: { provider: <span class="string">'gemini'</span> }
+});
+            </div>
+          </div>
+
+          <div class="flow-arrow">
+            <span class="label">workflow.run()</span>
+            <span class="arrow">→</span>
+            <span class="label">{ input }</span>
+          </div>
+
+          <div class="flow-box">
+            <div class="flow-box-title">
+              <span class="tag tag-sdk">SDK</span> x404r Client
+            </div>
+            <div class="flow-box-content">
+              <strong>Mode Selection:</strong><br>
+              • Embedded → Direct DB<br>
+              • Cloud → HTTP API
+            </div>
+          </div>
+
+          <div class="flow-arrow">
+            <span class="label">SQL / HTTP</span>
+            <span class="arrow">→</span>
+          </div>
+
+          <div class="flow-box">
+            <div class="flow-box-title">
+              <span class="tag tag-aws">Lambda</span> Supervisor
+            </div>
+            <div class="flow-box-content">
+              Creates job, decomposes into DAG tasks using Gemini AI
+            </div>
+          </div>
+
+          <div class="flow-arrow">
+            <span class="label">INSERT</span>
+            <span class="arrow">→</span>
+            <span class="label">jobs, tasks</span>
+          </div>
+
+          <div class="flow-box highlight">
+            <div class="flow-box-title">
+              <span class="tag tag-crdb">CockroachDB</span> State Store
+            </div>
+            <div class="flow-box-content">
+              Persistent storage for all state:<br>
+              jobs, tasks, checkpoints, memory
+            </div>
+          </div>
+
+          <div class="flow-arrow">
+            <span class="label">SKIP LOCKED</span>
+            <span class="arrow">←</span>
+            <span class="label">claim task</span>
+          </div>
+
+          <div class="flow-box">
+            <div class="flow-box-title">
+              <span class="tag tag-aws">Lambda</span> Worker
+            </div>
+            <div class="flow-box-content">
+              Executes tasks with checkpointing, AI inference
+            </div>
+          </div>
+
+          <div class="flow-arrow">
+            <span class="label">result</span>
+            <span class="arrow">→</span>
+          </div>
+
+          <div class="flow-box">
+            <div class="flow-box-title">
+              <span>📊</span> Dashboard
+            </div>
+            <div class="flow-box-content">
+              Real-time DAG visualization, monitoring
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: SDK INTERNAL ARCHITECTURE -->
+    <div class="section">
+      <h2 class="section-title">SDK Internal Architecture (@shalwin04/x404r-sdk)</h2>
+
+      <div class="grid-2">
+        <div class="component-card">
+          <h4><span class="tag tag-sdk">Core</span> x404r Client</h4>
+          <p>Main entry point. Initializes backend, AI provider, manages workflows.</p>
+          <div class="io-list">
+            <div class="input">
+              <div class="io-label in">INPUT: Config</div>
+              <div class="code" style="margin:0">
+{
+  mode: <span class="string">'embedded'</span> | <span class="string">'cloud'</span>,
+  connectionString: <span class="string">'postgresql://...'</span>,
+  ai: {
+    provider: <span class="string">'gemini'</span> | <span class="string">'openai'</span> | <span class="string">'anthropic'</span>,
+    apiKey: <span class="string">'...'</span>
+  },
+  tenantId?: <span class="string">'uuid'</span>,
+  debug?: <span class="keyword">boolean</span>
+}
+              </div>
+            </div>
+            <div class="output">
+              <div class="io-label out">OUTPUT: Runtime Instance</div>
+              <div class="code" style="margin:0">
+runtime.workflow()  <span class="comment">// Define workflows</span>
+runtime.worker()    <span class="comment">// Create workers</span>
+runtime.submit()    <span class="comment">// Submit jobs (cloud)</span>
+runtime.status()    <span class="comment">// Check job status</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-card">
+          <h4><span class="tag tag-sdk">Builder</span> WorkflowBuilder</h4>
+          <p>Defines workflow structure with steps, dependencies, handlers.</p>
+          <div class="io-list">
+            <div class="input">
+              <div class="io-label in">INPUT: Workflow Definition</div>
+              <div class="code" style="margin:0">
+{
+  name: <span class="string">'process-documents'</span>,
+  version: <span class="string">'1.0.0'</span>,
+  steps: [
+    {
+      name: <span class="string">'extract'</span>,
+      handler: <span class="keyword">async</span> (ctx) => {...},
+      dependsOn: []
+    },
+    {
+      name: <span class="string">'summarize'</span>,
+      dependsOn: [<span class="string">'extract'</span>],
+      handler: <span class="keyword">async</span> (ctx) => {...}
+    }
+  ]
+}
+              </div>
+            </div>
+            <div class="output">
+              <div class="io-label out">OUTPUT: Executable Workflow</div>
+              <div class="code" style="margin:0">
+workflow.run(input, { wait: <span class="keyword">true</span> })
+  → Promise&lt;{ workflowId, status, output }&gt;
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-card">
+          <h4><span class="tag tag-sdk">Execution</span> Worker</h4>
+          <p>Claims and executes tasks. Manages heartbeats and checkpoints.</p>
+          <div class="io-list">
+            <div class="input">
+              <div class="io-label in">INPUT: Worker Config</div>
+              <div class="code" style="margin:0">
+{
+  concurrency: <span class="number">5</span>,        <span class="comment">// Max parallel tasks</span>
+  pollInterval: <span class="number">1000</span>,    <span class="comment">// Poll every 1s</span>
+  heartbeatInterval: <span class="number">10000</span>, <span class="comment">// Heartbeat 10s</span>
+  taskTypes: [<span class="string">'extract'</span>]  <span class="comment">// Optional filter</span>
+}
+              </div>
+            </div>
+            <div class="output">
+              <div class="io-label out">OUTPUT: Worker Actions</div>
+              <div class="code" style="margin:0">
+worker.register(workflow)  <span class="comment">// Add workflow</span>
+worker.start()             <span class="comment">// Begin processing</span>
+worker.stop()              <span class="comment">// Graceful shutdown</span>
+worker.activeTaskCount     <span class="comment">// Current tasks</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-card">
+          <h4><span class="tag tag-sdk">Context</span> StepContext</h4>
+          <p>Passed to handlers. Provides state, checkpointing, AI access.</p>
+          <div class="io-list">
+            <div class="input">
+              <div class="io-label in">INPUT: Available Properties</div>
+              <div class="code" style="margin:0">
+ctx.input     <span class="comment">// Step input data</span>
+ctx.state     <span class="comment">// Last checkpoint state</span>
+ctx.workflow  <span class="comment">// { id, name, version }</span>
+ctx.task      <span class="comment">// { id, name, attempt }</span>
+ctx.ai        <span class="comment">// AI provider instance</span>
+              </div>
+            </div>
+            <div class="output">
+              <div class="io-label out">OUTPUT: Available Methods</div>
+              <div class="code" style="margin:0">
+<span class="keyword">await</span> ctx.checkpoint({ progress: <span class="number">5</span> })
+<span class="keyword">await</span> ctx.ai.generate(<span class="string">'prompt'</span>)
+<span class="keyword">await</span> ctx.ai.generateJSON(<span class="string">'prompt'</span>)
+ctx.log(<span class="string">'message'</span>, { data })
+<span class="keyword">await</span> ctx.sleep(<span class="number">1000</span>)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: AWS LAMBDA ARCHITECTURE -->
+    <div class="section">
+      <h2 class="section-title">AWS Lambda Functions — Detailed I/O</h2>
+
+      <div class="grid-2">
+        <div class="component-card">
+          <h4><span class="tag tag-aws">Lambda</span> Worker Function</h4>
+          <p>Triggered by EventBridge every 1 minute. Claims and executes tasks.</p>
+
+          <div class="io-list">
+            <div class="input">
+              <div class="io-label in">INPUT: EventBridge Event</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"action"</span>: <span class="string">"process"</span> | <span class="string">"reclaim"</span>,
+  <span class="string">"taskId"</span>?: <span class="string">"uuid"</span>  <span class="comment">// For specific task</span>
+}
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="vertical-flow">
+            <div class="step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <div class="step-title">Claim Task (CockroachDB)</div>
+                <div class="sql">
+<span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="table">task_nodes</span>
+<span class="keyword">WHERE</span> <span class="column">status</span> = <span class="string">'pending'</span>
+  <span class="keyword">AND</span> <span class="column">dependencies_met</span> = <span class="keyword">true</span>
+<span class="keyword">ORDER BY</span> <span class="column">priority</span> <span class="keyword">DESC</span>
+<span class="keyword">FOR UPDATE SKIP LOCKED</span>
+<span class="keyword">LIMIT</span> <span class="number">1</span>;
+                </div>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <div class="step-title">Load Checkpoint</div>
+                <div class="sql">
+<span class="keyword">SELECT</span> <span class="column">state</span>, <span class="column">step_index</span>
+<span class="keyword">FROM</span> <span class="table">checkpoints</span>
+<span class="keyword">WHERE</span> <span class="column">task_id</span> = $1
+<span class="keyword">ORDER BY</span> <span class="column">created_at</span> <span class="keyword">DESC</span>
+<span class="keyword">LIMIT</span> <span class="number">1</span>;
+                </div>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <div class="step-title">Execute Handler with AI</div>
+                <div class="code">
+<span class="comment">// Call Gemini for AI tasks</span>
+<span class="keyword">const</span> response = <span class="keyword">await</span> genAI
+  .getGenerativeModel({ model: <span class="string">'gemini-2.5-flash'</span> })
+  .generateContent(prompt);
+                </div>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">4</div>
+              <div class="step-content">
+                <div class="step-title">Save Checkpoint (Atomic)</div>
+                <div class="sql">
+<span class="keyword">BEGIN</span>;
+  <span class="keyword">UPDATE</span> <span class="table">task_nodes</span>
+    <span class="keyword">SET</span> <span class="column">state</span> = $1, <span class="column">heartbeat_at</span> = <span class="keyword">NOW</span>()
+    <span class="keyword">WHERE</span> <span class="column">id</span> = $2;
+  <span class="keyword">INSERT INTO</span> <span class="table">checkpoints</span>
+    (<span class="column">task_id</span>, <span class="column">step_index</span>, <span class="column">state</span>)
+    <span class="keyword">VALUES</span> ($2, $3, $1);
+<span class="keyword">COMMIT</span>;
+                </div>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">5</div>
+              <div class="step-content">
+                <div class="step-title">Complete Task</div>
+                <div class="sql">
+<span class="keyword">UPDATE</span> <span class="table">task_nodes</span>
+<span class="keyword">SET</span> <span class="column">status</span> = <span class="string">'completed'</span>,
+    <span class="column">output_payload</span> = $1,
+    <span class="column">completed_at</span> = <span class="keyword">NOW</span>()
+<span class="keyword">WHERE</span> <span class="column">id</span> = $2;
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="io-list">
+            <div class="output">
+              <div class="io-label out">OUTPUT: Worker Result</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"success"</span>: <span class="keyword">true</span>,
+  <span class="string">"taskId"</span>: <span class="string">"uuid"</span>,
+  <span class="string">"action"</span>: <span class="string">"process"</span>,
+  <span class="string">"details"</span>: {
+    <span class="string">"output"</span>: { ... }
+  }
+}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-card">
+          <h4><span class="tag tag-aws">Lambda</span> Supervisor Function</h4>
+          <p>Handles API requests via API Gateway. Creates jobs, manages tasks.</p>
+
+          <div class="io-list">
+            <div class="input">
+              <div class="io-label in">INPUT: API Gateway Event</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"httpMethod"</span>: <span class="string">"POST"</span>,
+  <span class="string">"path"</span>: <span class="string">"/jobs"</span>,
+  <span class="string">"headers"</span>: {
+    <span class="string">"Authorization"</span>: <span class="string">"Bearer x404r_..."</span>
+  },
+  <span class="string">"body"</span>: <span class="string">"{\"name\": \"...\", ...}"</span>
+}
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="vertical-flow">
+            <div class="step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <div class="step-title">Authenticate Request</div>
+                <div class="sql">
+<span class="keyword">SELECT</span> <span class="column">t.id</span>, <span class="column">t.plan</span>
+<span class="keyword">FROM</span> <span class="table">api_keys</span> <span class="column">a</span>
+<span class="keyword">JOIN</span> <span class="table">tenants</span> <span class="column">t</span> <span class="keyword">ON</span> <span class="column">a.tenant_id</span> = <span class="column">t.id</span>
+<span class="keyword">WHERE</span> <span class="column">a.key_hash</span> = <span class="function">SHA256</span>($1);
+                </div>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <div class="step-title">Check Usage Limits</div>
+                <div class="sql">
+<span class="keyword">SELECT</span> <span class="function">COUNT</span>(*) <span class="keyword">FROM</span> <span class="table">usage_events</span>
+<span class="keyword">WHERE</span> <span class="column">tenant_id</span> = $1
+  <span class="keyword">AND</span> <span class="column">event_type</span> = <span class="string">'task_created'</span>
+  <span class="keyword">AND</span> <span class="column">created_at</span> > <span class="function">date_trunc</span>(<span class="string">'month'</span>, <span class="keyword">NOW</span>());
+                </div>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <div class="step-title">Create Job</div>
+                <div class="sql">
+<span class="keyword">INSERT INTO</span> <span class="table">jobs</span>
+  (<span class="column">id</span>, <span class="column">tenant_id</span>, <span class="column">name</span>, <span class="column">input_payload</span>, <span class="column">status</span>)
+<span class="keyword">VALUES</span>
+  (<span class="function">gen_random_uuid</span>(), $1, $2, $3, <span class="string">'pending'</span>)
+<span class="keyword">RETURNING</span> *;
+                </div>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">4</div>
+              <div class="step-content">
+                <div class="step-title">Decompose with Gemini AI</div>
+                <div class="code">
+<span class="comment">// AI decomposes task into subtasks</span>
+<span class="keyword">const</span> decomposition = <span class="keyword">await</span> gemini.generateContent(`
+  Decompose this task into steps:
+  ${taskDescription}
+
+  Return JSON: { tasks: [...] }
+`);
+                </div>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">5</div>
+              <div class="step-content">
+                <div class="step-title">Create Task Nodes</div>
+                <div class="sql">
+<span class="keyword">INSERT INTO</span> <span class="table">task_nodes</span>
+  (<span class="column">job_id</span>, <span class="column">name</span>, <span class="column">task_type</span>, <span class="column">depends_on</span>, <span class="column">status</span>)
+<span class="keyword">VALUES</span>
+  ($1, <span class="string">'parse'</span>, <span class="string">'analyze'</span>, <span class="string">'[]'</span>, <span class="string">'pending'</span>),
+  ($1, <span class="string">'lint'</span>, <span class="string">'validate'</span>, <span class="string">'[]'</span>, <span class="string">'pending'</span>),
+  ($1, <span class="string">'report'</span>, <span class="string">'generate'</span>, <span class="string">'["parse","lint"]'</span>, <span class="string">'pending'</span>);
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="io-list">
+            <div class="output">
+              <div class="io-label out">OUTPUT: API Response</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"statusCode"</span>: <span class="number">201</span>,
+  <span class="string">"body"</span>: {
+    <span class="string">"jobId"</span>: <span class="string">"uuid"</span>,
+    <span class="string">"taskCount"</span>: <span class="number">3</span>,
+    <span class="string">"tasks"</span>: [
+      { <span class="string">"id"</span>: <span class="string">"..."</span>, <span class="string">"name"</span>: <span class="string">"parse"</span> },
+      ...
+    ]
+  }
+}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: API ENDPOINTS -->
+    <div class="section">
+      <h2 class="section-title">API Endpoints — Request/Response</h2>
+
+      <div class="api-endpoint">
+        <div class="method-path">
+          <span class="method get">GET</span>
+          <span class="path">/ready</span>
+        </div>
+        <div class="details">
+          <p class="desc">Health check endpoint. No authentication required.</p>
+          <div class="req-res">
+            <div class="req">
+              <div class="req-res-title">Request</div>
+              <div class="code" style="margin:0">
+<span class="comment">// No body required</span>
+curl https://api.../prod/ready
+              </div>
+            </div>
+            <div class="res">
+              <div class="req-res-title">Response 200</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"status"</span>: <span class="string">"ok"</span>,
+  <span class="string">"timestamp"</span>: <span class="string">"2026-08-18T..."</span>
+}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="method-path">
+          <span class="method post">POST</span>
+          <span class="path">/jobs</span>
+        </div>
+        <div class="details">
+          <p class="desc">Create a new job. Requires authentication. AI decomposes into tasks.</p>
+          <div class="req-res">
+            <div class="req">
+              <div class="req-res-title">Request</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"name"</span>: <span class="string">"Code Review"</span>,
+  <span class="string">"taskDescription"</span>: <span class="string">"Review PR #123"</span>,
+  <span class="string">"context"</span>: {
+    <span class="string">"repo"</span>: <span class="string">"github.com/..."</span>
+  },
+  <span class="string">"priority"</span>: <span class="number">10</span>
+}
+              </div>
+            </div>
+            <div class="res">
+              <div class="req-res-title">Response 201</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"jobId"</span>: <span class="string">"550e8400-..."</span>,
+  <span class="string">"taskCount"</span>: <span class="number">4</span>,
+  <span class="string">"tasks"</span>: [
+    { <span class="string">"id"</span>: <span class="string">"..."</span>, <span class="string">"name"</span>: <span class="string">"fetch"</span> },
+    { <span class="string">"id"</span>: <span class="string">"..."</span>, <span class="string">"name"</span>: <span class="string">"analyze"</span> }
+  ],
+  <span class="string">"usage"</span>: { <span class="string">"used"</span>: <span class="number">45</span>, <span class="string">"limit"</span>: <span class="number">100</span> }
+}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="method-path">
+          <span class="method get">GET</span>
+          <span class="path">/jobs/{jobId}</span>
+        </div>
+        <div class="details">
+          <p class="desc">Get job details with all tasks and their statuses.</p>
+          <div class="req-res">
+            <div class="req">
+              <div class="req-res-title">Request</div>
+              <div class="code" style="margin:0">
+curl https://api.../prod/jobs/550e8400-...
+              </div>
+            </div>
+            <div class="res">
+              <div class="req-res-title">Response 200</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"job"</span>: {
+    <span class="string">"id"</span>: <span class="string">"550e8400-..."</span>,
+    <span class="string">"name"</span>: <span class="string">"Code Review"</span>,
+    <span class="string">"status"</span>: <span class="string">"running"</span>
+  },
+  <span class="string">"tasks"</span>: [
+    {
+      <span class="string">"id"</span>: <span class="string">"..."</span>,
+      <span class="string">"name"</span>: <span class="string">"analyze"</span>,
+      <span class="string">"status"</span>: <span class="string">"completed"</span>,
+      <span class="string">"output"</span>: { ... }
+    }
+  ],
+  <span class="string">"stats"</span>: {
+    <span class="string">"pending"</span>: <span class="number">1</span>,
+    <span class="string">"running"</span>: <span class="number">1</span>,
+    <span class="string">"completed"</span>: <span class="number">2</span>
+  }
+}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="method-path">
+          <span class="method post">POST</span>
+          <span class="path">/chaos/kill-worker</span>
+        </div>
+        <div class="details">
+          <p class="desc">Simulate worker crash for demo. Sets heartbeat to stale.</p>
+          <div class="req-res">
+            <div class="req">
+              <div class="req-res-title">Request</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"taskId"</span>: <span class="string">"task-uuid"</span>
+}
+              </div>
+            </div>
+            <div class="res">
+              <div class="req-res-title">Response 200</div>
+              <div class="code" style="margin:0">
+{
+  <span class="string">"success"</span>: <span class="keyword">true</span>,
+  <span class="string">"message"</span>: <span class="string">"Simulated crash. Will be reclaimed."</span>
+}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 5: DATABASE SCHEMA -->
+    <div class="section">
+      <h2 class="section-title">CockroachDB Schema — Complete Tables</h2>
+
+      <div class="grid-3">
+        <div class="schema-table">
+          <div class="table-name">📁 jobs</div>
+          <div class="columns">
+            <div class="column"><span class="col-name col-pk">id</span><span class="col-type">UUID PK</span></div>
+            <div class="column"><span class="col-name col-fk">tenant_id</span><span class="col-type">UUID FK</span></div>
+            <div class="column"><span class="col-name">name</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">description</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">status</span><span class="col-type">ENUM</span></div>
+            <div class="column"><span class="col-name">input_payload</span><span class="col-type">JSONB</span></div>
+            <div class="column"><span class="col-name">output_payload</span><span class="col-type">JSONB</span></div>
+            <div class="column"><span class="col-name">priority</span><span class="col-type">INT</span></div>
+            <div class="column"><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span></div>
+            <div class="column"><span class="col-name">completed_at</span><span class="col-type">TIMESTAMP</span></div>
+          </div>
+        </div>
+
+        <div class="schema-table">
+          <div class="table-name">📌 task_nodes</div>
+          <div class="columns">
+            <div class="column"><span class="col-name col-pk">id</span><span class="col-type">UUID PK</span></div>
+            <div class="column"><span class="col-name col-fk">job_id</span><span class="col-type">UUID FK</span></div>
+            <div class="column"><span class="col-name col-fk">tenant_id</span><span class="col-type">UUID FK</span></div>
+            <div class="column"><span class="col-name">name</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">task_type</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">status</span><span class="col-type">ENUM</span></div>
+            <div class="column"><span class="col-name">input_payload</span><span class="col-type">JSONB</span></div>
+            <div class="column"><span class="col-name">output_payload</span><span class="col-type">JSONB</span></div>
+            <div class="column"><span class="col-name">state</span><span class="col-type">JSONB</span></div>
+            <div class="column"><span class="col-name">depends_on</span><span class="col-type">UUID[]</span></div>
+            <div class="column"><span class="col-name">worker_id</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">heartbeat_at</span><span class="col-type">TIMESTAMP</span></div>
+            <div class="column"><span class="col-name">attempt_count</span><span class="col-type">INT</span></div>
+            <div class="column"><span class="col-name">max_attempts</span><span class="col-type">INT</span></div>
+          </div>
+        </div>
+
+        <div class="schema-table">
+          <div class="table-name">💾 checkpoints</div>
+          <div class="columns">
+            <div class="column"><span class="col-name col-pk">id</span><span class="col-type">UUID PK</span></div>
+            <div class="column"><span class="col-name col-fk">task_id</span><span class="col-type">UUID FK</span></div>
+            <div class="column"><span class="col-name">step_index</span><span class="col-type">INT</span></div>
+            <div class="column"><span class="col-name">state</span><span class="col-type">JSONB</span></div>
+            <div class="column"><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span></div>
+          </div>
+        </div>
+
+        <div class="schema-table">
+          <div class="table-name">🧠 memory_vectors</div>
+          <div class="columns">
+            <div class="column"><span class="col-name col-pk">id</span><span class="col-type">UUID PK</span></div>
+            <div class="column"><span class="col-name col-fk">task_id</span><span class="col-type">UUID FK</span></div>
+            <div class="column"><span class="col-name col-fk">tenant_id</span><span class="col-type">UUID FK</span></div>
+            <div class="column"><span class="col-name">event_type</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">context_summary</span><span class="col-type">TEXT</span></div>
+            <div class="column"><span class="col-name">embedding</span><span class="col-type">VECTOR(768)</span></div>
+            <div class="column"><span class="col-name">task_type</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">error_category</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">resolution</span><span class="col-type">TEXT</span></div>
+          </div>
+        </div>
+
+        <div class="schema-table">
+          <div class="table-name">🏢 tenants</div>
+          <div class="columns">
+            <div class="column"><span class="col-name col-pk">id</span><span class="col-type">UUID PK</span></div>
+            <div class="column"><span class="col-name">name</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">plan</span><span class="col-type">ENUM</span></div>
+            <div class="column"><span class="col-name">monthly_task_limit</span><span class="col-type">INT</span></div>
+            <div class="column"><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span></div>
+          </div>
+        </div>
+
+        <div class="schema-table">
+          <div class="table-name">🔑 api_keys</div>
+          <div class="columns">
+            <div class="column"><span class="col-name col-pk">id</span><span class="col-type">UUID PK</span></div>
+            <div class="column"><span class="col-name col-fk">tenant_id</span><span class="col-type">UUID FK</span></div>
+            <div class="column"><span class="col-name">name</span><span class="col-type">STRING</span></div>
+            <div class="column"><span class="col-name">key_hash</span><span class="col-type">BYTES</span></div>
+            <div class="column"><span class="col-name">scopes</span><span class="col-type">STRING[]</span></div>
+            <div class="column"><span class="col-name">expires_at</span><span class="col-type">TIMESTAMP</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="highlight-box" style="margin-top: 20px;">
+        <h4>🔒 Key SQL Operations</h4>
+        <div class="grid-2" style="margin-top: 15px;">
+          <div>
+            <strong>Atomic Task Claiming:</strong>
+            <div class="sql">
+<span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="table">task_nodes</span>
+<span class="keyword">WHERE</span> <span class="column">status</span> = <span class="string">'pending'</span>
+<span class="keyword">FOR UPDATE SKIP LOCKED</span>
+<span class="keyword">LIMIT</span> <span class="number">1</span>;
+
+<span class="comment">-- Prevents race conditions</span>
+<span class="comment">-- Multiple workers can call simultaneously</span>
+<span class="comment">-- Each gets a unique task or nothing</span>
+            </div>
+          </div>
+          <div>
+            <strong>Vector Similarity Search:</strong>
+            <div class="sql">
+<span class="keyword">SELECT</span> <span class="column">context_summary</span>, <span class="column">resolution</span>
+<span class="keyword">FROM</span> <span class="table">memory_vectors</span>
+<span class="keyword">WHERE</span> <span class="column">tenant_id</span> = $1
+<span class="keyword">ORDER BY</span> <span class="column">embedding</span> <-> $2
+<span class="keyword">LIMIT</span> <span class="number">5</span>;
+
+<span class="comment">-- Finds similar past experiences</span>
+<span class="comment">-- Agents learn from history</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 6: CRASH RECOVERY DETAILED -->
+    <div class="section">
+      <h2 class="section-title">Crash Recovery — Complete Flow</h2>
+
+      <div class="flow-container">
+        <div class="flow">
+          <div class="flow-box">
+            <div class="flow-box-title">🔄 Worker A Running</div>
+            <div class="flow-box-content">
+              Task: process item 5/10<br>
+              <span class="tag tag-crdb">Heartbeat</span> every 10s
+            </div>
+            <div class="code">
+<span class="keyword">await</span> ctx.checkpoint({
+  progress: <span class="number">5</span>,
+  items: [...]
+});
+            </div>
+          </div>
+
+          <div class="flow-arrow">
+            <span class="label">checkpoint</span>
+            <span class="arrow">→</span>
+          </div>
+
+          <div class="flow-box highlight">
+            <div class="flow-box-title">💾 CockroachDB</div>
+            <div class="flow-box-content">
+              <strong>Saved State:</strong><br>
+              checkpoints: { progress: 5 }<br>
+              task_nodes.state: { progress: 5 }<br>
+              heartbeat_at: NOW()
+            </div>
+          </div>
+
+          <div class="flow-arrow">
+            <span class="label">💥 CRASH</span>
+            <span class="arrow">→</span>
+            <span class="label">Lambda dies</span>
+          </div>
+
+          <div class="flow-box" style="border-color: #f87171;">
+            <div class="flow-box-title">💀 Worker A Dead</div>
+            <div class="flow-box-content">
+              Memory = gone<br>
+              Process = terminated<br>
+              <strong>But state is safe in DB!</strong>
+            </div>
+          </div>
+
+          <div class="flow-arrow">
+            <span class="label">60s no heartbeat</span>
+            <span class="arrow">→</span>
+          </div>
+
+          <div class="flow-box">
+            <div class="flow-box-title">⏰ Reclaim Job</div>
+            <div class="flow-box-content">
+              EventBridge triggers reclaim
+            </div>
+            <div class="sql" style="font-size: 0.65rem;">
+<span class="keyword">UPDATE</span> <span class="table">task_nodes</span>
+<span class="keyword">SET</span> <span class="column">status</span> = <span class="string">'pending'</span>,
+    <span class="column">worker_id</span> = <span class="keyword">NULL</span>
+<span class="keyword">WHERE</span> <span class="column">heartbeat_at</span> <
+  <span class="keyword">NOW</span>() - <span class="string">'60s'</span>;
+            </div>
+          </div>
+
+          <div class="flow-arrow">
+            <span class="label">claim</span>
+            <span class="arrow">→</span>
+          </div>
+
+          <div class="flow-box" style="border-color: #4ade80;">
+            <div class="flow-box-title">✅ Worker B Claims</div>
+            <div class="flow-box-content">
+              Loads checkpoint<br>
+              ctx.state.progress = 5<br>
+              <strong>Continues from item 5!</strong>
+            </div>
+            <div class="code">
+<span class="keyword">let</span> p = ctx.state.progress || <span class="number">0</span>;
+<span class="comment">// p = 5, not 0!</span>
+<span class="keyword">for</span> (i = p; i < <span class="number">10</span>; i++) {...}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="highlight-box">
+        <h4>📊 Recovery Metrics</h4>
+        <table style="margin-top: 15px;">
+          <tr>
+            <th>Metric</th>
+            <th>Without x404-r</th>
+            <th>With x404-r</th>
+          </tr>
+          <tr>
+            <td>Progress on crash at step 5/10</td>
+            <td style="color: #f87171;">Restart from 0</td>
+            <td style="color: #4ade80;">Resume from 5</td>
+          </tr>
+          <tr>
+            <td>Work lost</td>
+            <td style="color: #f87171;">100%</td>
+            <td style="color: #4ade80;">0%</td>
+          </tr>
+          <tr>
+            <td>AI tokens wasted</td>
+            <td style="color: #f87171;">All used tokens</td>
+            <td style="color: #4ade80;">None</td>
+          </tr>
+          <tr>
+            <td>Recovery time</td>
+            <td style="color: #f87171;">Full re-run</td>
+            <td style="color: #4ade80;">&lt; 60 seconds</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- SECTION 7: EVENTBRIDGE SCHEDULING -->
+    <div class="section">
+      <h2 class="section-title">AWS EventBridge — Scheduling</h2>
+
+      <div class="grid-2">
+        <div class="component-card">
+          <h4><span class="tag tag-aws">Rule</span> Worker Poll (1 min)</h4>
+          <p>Triggers worker to claim and process pending tasks.</p>
+          <div class="io-list">
+            <div class="input">
+              <div class="io-label in">Schedule</div>
+              <div class="code" style="margin:0">rate(<span class="number">1</span> minute)</div>
+            </div>
+            <div class="output">
+              <div class="io-label out">Target Payload</div>
+              <div class="code" style="margin:0">{ <span class="string">"action"</span>: <span class="string">"process"</span> }</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-card">
+          <h4><span class="tag tag-aws">Rule</span> Stale Reclaim (2 min)</h4>
+          <p>Reclaims tasks from dead workers (no heartbeat for 60s).</p>
+          <div class="io-list">
+            <div class="input">
+              <div class="io-label in">Schedule</div>
+              <div class="code" style="margin:0">rate(<span class="number">2</span> minutes)</div>
+            </div>
+            <div class="output">
+              <div class="io-label out">Target Payload</div>
+              <div class="code" style="margin:0">{ <span class="string">"action"</span>: <span class="string">"reclaim"</span> }</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="text-align: center; margin-top: 50px; padding: 30px; color: #64748b;">
+      <p style="font-size: 1.2rem; margin-bottom: 10px;">
+        <strong style="color: #fff;">x404-r</strong> — Context is never lost
+      </p>
+      <p>Built for CockroachDB × AWS Hackathon 2026</p>
+      <div style="margin-top: 20px; display: flex; justify-content: center; gap: 30px;">
+        <a href="https://github.com/shalwin04/x404-r" style="color: #a78bfa; text-decoration: none;">GitHub</a>
+        <a href="https://www.npmjs.com/package/@shalwin04/x404r-sdk" style="color: #a78bfa; text-decoration: none;">npm</a>
+        <a href="https://gb74j85no4.execute-api.us-east-1.amazonaws.com/prod" style="color: #a78bfa; text-decoration: none;">API</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

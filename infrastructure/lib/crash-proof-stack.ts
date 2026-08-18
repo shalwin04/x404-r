@@ -4,18 +4,15 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
 export interface CrashProofStackProps extends cdk.StackProps {
+  /** ARN of the secret containing the CockroachDB connection string */
   databaseSecretArn?: string;
+  /** ARN of the secret containing the Gemini API key */
   geminiApiKeySecretArn?: string;
-  /** Enable AWS Bedrock for AI inference */
-  enableBedrock?: boolean;
-  /** Bedrock region (defaults to stack region) */
-  bedrockRegion?: string;
 }
 
 export class CrashProofStack extends cdk.Stack {
@@ -51,8 +48,16 @@ export class CrashProofStack extends cdk.Stack {
       );
     }
 
+    // Worker Lambda log group
+    const workerLogGroup = new logs.LogGroup(this, 'WorkerLogGroup', {
+      logGroupName: '/aws/lambda/x404r-worker',
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
     // Worker Lambda
     this.workerLambda = new lambda.Function(this, 'WorkerLambda', {
+      functionName: 'x404r-worker',
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'handler.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../../packages/worker/dist')),
@@ -62,31 +67,25 @@ export class CrashProofStack extends cdk.Stack {
         ...environment,
         DATABASE_URL: databaseSecret?.secretValue.unsafeUnwrap() || '',
         GEMINI_API_KEY: geminiSecret?.secretValue.unsafeUnwrap() || '',
-        AI_PROVIDER: props?.enableBedrock ? 'bedrock' : 'gemini',
-        BEDROCK_REGION: props?.bedrockRegion || cdk.Stack.of(this).region,
       },
-      description: 'x404-r worker - claims and executes crash-proof tasks',
-      logRetention: logs.RetentionDays.ONE_WEEK,
+      description: 'x404-r worker - claims and executes crash-proof tasks using Gemini AI',
+      logGroup: workerLogGroup,
     });
 
-    // Grant secrets access
+    // Grant secrets access to worker
     databaseSecret?.grantRead(this.workerLambda);
     geminiSecret?.grantRead(this.workerLambda);
 
-    // Grant Bedrock access if enabled
-    if (props?.enableBedrock) {
-      this.workerLambda.addToRolePolicy(new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          'bedrock:InvokeModel',
-          'bedrock:InvokeModelWithResponseStream',
-        ],
-        resources: ['*'],
-      }));
-    }
+    // Supervisor Lambda log group
+    const supervisorLogGroup = new logs.LogGroup(this, 'SupervisorLogGroup', {
+      logGroupName: '/aws/lambda/x404r-supervisor',
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
     // Supervisor Lambda
     this.supervisorLambda = new lambda.Function(this, 'SupervisorLambda', {
+      functionName: 'x404r-supervisor',
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'handler.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../../packages/supervisor/dist')),
@@ -96,33 +95,19 @@ export class CrashProofStack extends cdk.Stack {
         ...environment,
         DATABASE_URL: databaseSecret?.secretValue.unsafeUnwrap() || '',
         GEMINI_API_KEY: geminiSecret?.secretValue.unsafeUnwrap() || '',
-        AI_PROVIDER: props?.enableBedrock ? 'bedrock' : 'gemini',
-        BEDROCK_REGION: props?.bedrockRegion || cdk.Stack.of(this).region,
       },
-      description: 'x404-r supervisor - manages jobs, time travel, and cost tracking',
-      logRetention: logs.RetentionDays.ONE_WEEK,
+      description: 'x404-r supervisor - manages jobs and task decomposition using Gemini AI',
+      logGroup: supervisorLogGroup,
     });
 
-    // Grant secrets access
+    // Grant secrets access to supervisor
     databaseSecret?.grantRead(this.supervisorLambda);
     geminiSecret?.grantRead(this.supervisorLambda);
 
-    // Grant Bedrock access if enabled
-    if (props?.enableBedrock) {
-      this.supervisorLambda.addToRolePolicy(new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          'bedrock:InvokeModel',
-          'bedrock:InvokeModelWithResponseStream',
-        ],
-        resources: ['*'],
-      }));
-    }
-
     // API Gateway
-    this.api = new apigateway.RestApi(this, 'CrashProofApi', {
-      restApiName: 'Crash-Proof Agent API',
-      description: 'API for the crash-proof agent system',
+    this.api = new apigateway.RestApi(this, 'X404rApi', {
+      restApiName: 'x404-r API',
+      description: 'Crash-proof agent runtime API',
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
@@ -130,78 +115,62 @@ export class CrashProofStack extends cdk.Stack {
       },
     });
 
-    // Supervisor integration
+    // Supervisor integration for API endpoints
     const supervisorIntegration = new apigateway.LambdaIntegration(this.supervisorLambda);
+
+    // Health check endpoint
+    const ready = this.api.root.addResource('ready');
+    ready.addMethod('GET', supervisorIntegration);
 
     // Jobs endpoints
     const jobs = this.api.root.addResource('jobs');
-    jobs.addMethod('GET', supervisorIntegration);
-    jobs.addMethod('POST', supervisorIntegration);
+    jobs.addMethod('GET', supervisorIntegration);   // List jobs
+    jobs.addMethod('POST', supervisorIntegration);  // Create job
 
+    // Demo job endpoint
     const demoJobs = jobs.addResource('demo');
     demoJobs.addMethod('POST', supervisorIntegration);
 
+    // Single job endpoint
     const singleJob = jobs.addResource('{jobId}');
     singleJob.addMethod('GET', supervisorIntegration);
 
-    // Time Travel endpoints - checkpoints and replay
-    const checkpoints = singleJob.addResource('checkpoints');
-    checkpoints.addMethod('GET', supervisorIntegration);
-
-    const replay = singleJob.addResource('replay');
-    replay.addMethod('POST', supervisorIntegration);
-
-    // Cost tracking endpoint
-    const cost = singleJob.addResource('cost');
-    cost.addMethod('GET', supervisorIntegration);
-
-    // Usage tracking endpoint
+    // Usage endpoint
     const usage = this.api.root.addResource('usage');
     usage.addMethod('GET', supervisorIntegration);
 
-    // Tenant management endpoints
-    const tenants = this.api.root.addResource('tenants');
-    tenants.addMethod('POST', supervisorIntegration);
-
-    const singleTenant = tenants.addResource('{tenantId}');
-    singleTenant.addMethod('GET', supervisorIntegration);
-
-    const apiKeys = singleTenant.addResource('api-keys');
-    apiKeys.addMethod('POST', supervisorIntegration);
-    apiKeys.addMethod('GET', supervisorIntegration);
-
-    // Chaos endpoints
+    // Chaos testing endpoints
     const chaos = this.api.root.addResource('chaos');
     const killWorker = chaos.addResource('kill-worker');
     killWorker.addMethod('POST', supervisorIntegration);
 
-    // Trigger endpoints (for manual testing)
+    // Worker integration for manual triggers
+    const workerIntegration = new apigateway.LambdaIntegration(this.workerLambda);
+
+    // Manual trigger endpoints (for testing)
     const triggerWorker = this.api.root.addResource('trigger-worker');
-    triggerWorker.addMethod('POST', new apigateway.LambdaIntegration(this.workerLambda));
+    triggerWorker.addMethod('POST', workerIntegration);
 
-    const triggerReclaim = this.api.root.addResource('trigger-reclaim');
-    triggerReclaim.addMethod('POST', new apigateway.LambdaIntegration(this.workerLambda));
-
-    // EventBridge rule for worker polling (every 10 seconds)
+    // EventBridge rule for worker polling (every 1 minute)
     new events.Rule(this, 'WorkerPollRule', {
-      schedule: events.Schedule.rate(cdk.Duration.seconds(10)),
+      schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
       targets: [
         new targets.LambdaFunction(this.workerLambda, {
           event: events.RuleTargetInput.fromObject({ action: 'process' }),
         }),
       ],
-      description: 'Poll for new tasks every 10 seconds',
+      description: 'Poll for new tasks every minute',
     });
 
-    // EventBridge rule for stale task reclaim (every minute)
+    // EventBridge rule for stale task reclaim (every 2 minutes)
     new events.Rule(this, 'ReclaimRule', {
-      schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
+      schedule: events.Schedule.rate(cdk.Duration.minutes(2)),
       targets: [
         new targets.LambdaFunction(this.workerLambda, {
           event: events.RuleTargetInput.fromObject({ action: 'reclaim' }),
         }),
       ],
-      description: 'Reclaim stale tasks every minute',
+      description: 'Reclaim stale tasks every 2 minutes',
     });
 
     // Outputs

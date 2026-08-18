@@ -307,69 +307,401 @@ npx tsx examples/simple-workflow.ts
 npx tsx examples/code-review-agent.ts
 ```
 
-## AWS Deployment
+## Deployment
 
-### Option 1: Docker Compose (Quickest)
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         PRODUCTION ARCHITECTURE                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   Users                                                                 │
+│     │                                                                   │
+│     ▼                                                                   │
+│   ┌─────────────────┐         ┌─────────────────┐                      │
+│   │     Vercel      │         │   AWS Lambda    │                      │
+│   │   (Dashboard)   │────────▶│   (Workers)     │                      │
+│   │   Next.js UI    │  API    │                 │                      │
+│   └─────────────────┘         └────────┬────────┘                      │
+│                                        │                                │
+│                                        ▼                                │
+│                               ┌─────────────────┐                      │
+│                               │  CockroachDB    │                      │
+│                               │     Cloud       │                      │
+│                               │  (Free Tier)    │                      │
+│                               └─────────────────┘                      │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Step 1: CockroachDB Cloud Setup
 
 ```bash
-# Clone and setup
-git clone https://github.com/shalwin04/x404-r.git
-cd x404-r
-cp .env.example .env
-# Edit .env with your DATABASE_URL and GEMINI_API_KEY
+# 1. Go to https://cockroachlabs.cloud
+# 2. Create a free cluster (no credit card required)
+# 3. Click "Connect" → Get connection string
+# 4. Save it - you'll need it for Lambda and local dev
 
-# Deploy
-docker-compose up -d
+# Connection string format:
+# postgresql://username:password@free-tier.gcp-us-central1.cockroachlabs.cloud:26257/x404r?sslmode=verify-full
+```
+
+### Step 2: AWS Lambda Deployment (Manual)
+
+#### Prerequisites
+```bash
+# Install AWS CLI
+brew install awscli  # macOS
+# or: https://aws.amazon.com/cli/
+
+# Configure AWS credentials
+aws configure
+# Enter: AWS Access Key ID, Secret Access Key, Region (us-east-1)
+
+# Verify
+aws sts get-caller-identity
+```
+
+#### Step 2.1: Build Lambda Packages
+
+```bash
+# Build the worker Lambda
+cd packages/worker
+npm install
+npm run build
+
+# Create deployment zip
+cd dist
+zip -r ../worker-lambda.zip .
+cd ..
+
+# Build the supervisor Lambda
+cd ../supervisor
+npm install
+npm run build
+
+# Create deployment zip
+cd dist
+zip -r ../supervisor-lambda.zip .
+cd ../..
+```
+
+#### Step 2.2: Create IAM Role for Lambda
+
+```bash
+# Create trust policy file
+cat > trust-policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+# Create the IAM role
+aws iam create-role \
+  --role-name x404r-lambda-role \
+  --assume-role-policy-document file://trust-policy.json
+
+# Attach basic Lambda execution policy
+aws iam attach-role-policy \
+  --role-name x404r-lambda-role \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+# Attach Secrets Manager read policy
+aws iam attach-role-policy \
+  --role-name x404r-lambda-role \
+  --policy-arn arn:aws:iam::aws:policy/SecretsManagerReadWrite
+
+# Get the role ARN (save this!)
+aws iam get-role --role-name x404r-lambda-role --query 'Role.Arn' --output text
+# Output: arn:aws:iam::123456789:role/x404r-lambda-role
+```
+
+#### Step 2.3: Store Secrets in AWS Secrets Manager
+
+```bash
+# Store CockroachDB connection string
+aws secretsmanager create-secret \
+  --name x404r/database-url \
+  --description "CockroachDB connection string" \
+  --secret-string "postgresql://YOUR_USER:YOUR_PASS@YOUR_HOST:26257/x404r?sslmode=verify-full" \
+  --region us-east-1
+
+# Store Gemini API key
+aws secretsmanager create-secret \
+  --name x404r/gemini-api-key \
+  --description "Gemini API key" \
+  --secret-string "YOUR_GEMINI_API_KEY" \
+  --region us-east-1
+
+# Verify secrets
+aws secretsmanager list-secrets --region us-east-1
+```
+
+#### Step 2.4: Create Worker Lambda
+
+```bash
+# Create the Worker Lambda function
+aws lambda create-function \
+  --function-name x404r-worker \
+  --runtime nodejs20.x \
+  --role arn:aws:iam::YOUR_ACCOUNT_ID:role/x404r-lambda-role \
+  --handler handler.handler \
+  --zip-file fileb://packages/worker/worker-lambda.zip \
+  --timeout 300 \
+  --memory-size 1024 \
+  --environment "Variables={DATABASE_SECRET_ARN=arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:x404r/database-url,GEMINI_SECRET_ARN=arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:x404r/gemini-api-key}" \
+  --region us-east-1
+
+# Verify
+aws lambda get-function --function-name x404r-worker --region us-east-1
+```
+
+#### Step 2.5: Create Supervisor Lambda
+
+```bash
+# Create the Supervisor Lambda function
+aws lambda create-function \
+  --function-name x404r-supervisor \
+  --runtime nodejs20.x \
+  --role arn:aws:iam::YOUR_ACCOUNT_ID:role/x404r-lambda-role \
+  --handler handler.handler \
+  --zip-file fileb://packages/supervisor/supervisor-lambda.zip \
+  --timeout 120 \
+  --memory-size 1024 \
+  --environment "Variables={DATABASE_SECRET_ARN=arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:x404r/database-url,GEMINI_SECRET_ARN=arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:x404r/gemini-api-key}" \
+  --region us-east-1
+```
+
+#### Step 2.6: Create EventBridge Rule (Worker Polling)
+
+```bash
+# Create rule to trigger worker every 10 seconds
+aws events put-rule \
+  --name x404r-worker-poll \
+  --schedule-expression "rate(1 minute)" \
+  --state ENABLED \
+  --region us-east-1
+
+# Add permission for EventBridge to invoke Lambda
+aws lambda add-permission \
+  --function-name x404r-worker \
+  --statement-id eventbridge-invoke \
+  --action lambda:InvokeFunction \
+  --principal events.amazonaws.com \
+  --source-arn arn:aws:events:us-east-1:YOUR_ACCOUNT_ID:rule/x404r-worker-poll \
+  --region us-east-1
+
+# Add Lambda as target
+aws events put-targets \
+  --rule x404r-worker-poll \
+  --targets "Id"="1","Arn"="arn:aws:lambda:us-east-1:YOUR_ACCOUNT_ID:function:x404r-worker","Input"="{\"action\":\"process\"}" \
+  --region us-east-1
+```
+
+#### Step 2.7: Create API Gateway
+
+```bash
+# Create REST API
+aws apigateway create-rest-api \
+  --name x404r-api \
+  --description "x404-r API" \
+  --region us-east-1
+
+# Get the API ID (save this!)
+API_ID=$(aws apigateway get-rest-apis --query "items[?name=='x404r-api'].id" --output text --region us-east-1)
+echo "API ID: $API_ID"
+
+# Get root resource ID
+ROOT_ID=$(aws apigateway get-resources --rest-api-id $API_ID --query "items[?path=='/'].id" --output text --region us-east-1)
+echo "Root ID: $ROOT_ID"
+
+# Create /jobs resource
+aws apigateway create-resource \
+  --rest-api-id $API_ID \
+  --parent-id $ROOT_ID \
+  --path-part jobs \
+  --region us-east-1
+
+JOBS_ID=$(aws apigateway get-resources --rest-api-id $API_ID --query "items[?path=='/jobs'].id" --output text --region us-east-1)
+
+# Create GET method for /jobs
+aws apigateway put-method \
+  --rest-api-id $API_ID \
+  --resource-id $JOBS_ID \
+  --http-method GET \
+  --authorization-type NONE \
+  --region us-east-1
+
+# Create POST method for /jobs
+aws apigateway put-method \
+  --rest-api-id $API_ID \
+  --resource-id $JOBS_ID \
+  --http-method POST \
+  --authorization-type NONE \
+  --region us-east-1
+
+# Integrate with Supervisor Lambda
+aws apigateway put-integration \
+  --rest-api-id $API_ID \
+  --resource-id $JOBS_ID \
+  --http-method GET \
+  --type AWS_PROXY \
+  --integration-http-method POST \
+  --uri arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:YOUR_ACCOUNT_ID:function:x404r-supervisor/invocations \
+  --region us-east-1
+
+aws apigateway put-integration \
+  --rest-api-id $API_ID \
+  --resource-id $JOBS_ID \
+  --http-method POST \
+  --type AWS_PROXY \
+  --integration-http-method POST \
+  --uri arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:YOUR_ACCOUNT_ID:function:x404r-supervisor/invocations \
+  --region us-east-1
+
+# Add Lambda permission for API Gateway
+aws lambda add-permission \
+  --function-name x404r-supervisor \
+  --statement-id apigateway-invoke \
+  --action lambda:InvokeFunction \
+  --principal apigateway.amazonaws.com \
+  --source-arn "arn:aws:execute-api:us-east-1:YOUR_ACCOUNT_ID:$API_ID/*" \
+  --region us-east-1
+
+# Deploy API
+aws apigateway create-deployment \
+  --rest-api-id $API_ID \
+  --stage-name prod \
+  --region us-east-1
+
+# Get your API URL
+echo "API URL: https://$API_ID.execute-api.us-east-1.amazonaws.com/prod"
+```
+
+#### Step 2.8: Test Deployment
+
+```bash
+# Test the API
+curl https://YOUR_API_ID.execute-api.us-east-1.amazonaws.com/prod/jobs
+
+# Check Lambda logs
+aws logs tail /aws/lambda/x404r-worker --follow
+aws logs tail /aws/lambda/x404r-supervisor --follow
+```
+
+#### Updating Lambda Code
+
+```bash
+# After making changes, rebuild and update:
+
+# Update Worker
+cd packages/worker
+npm run build
+cd dist && zip -r ../worker-lambda.zip . && cd ..
+aws lambda update-function-code \
+  --function-name x404r-worker \
+  --zip-file fileb://worker-lambda.zip \
+  --region us-east-1
+
+# Update Supervisor
+cd ../supervisor
+npm run build
+cd dist && zip -r ../supervisor-lambda.zip . && cd ..
+aws lambda update-function-code \
+  --function-name x404r-supervisor \
+  --zip-file fileb://supervisor-lambda.zip \
+  --region us-east-1
+```
+
+#### Lambda Architecture
+
+| Lambda | Trigger | Purpose |
+|--------|---------|---------|
+| **x404r-worker** | EventBridge (every 1 min) | Claims and executes tasks |
+| **x404r-supervisor** | API Gateway | Job management, time travel, cost tracking |
+
+#### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/jobs` | GET | List all jobs |
+| `/jobs` | POST | Create new job |
+| `/jobs/{id}` | GET | Get job details |
+| `/jobs/{id}/checkpoints` | GET | Get checkpoints (time travel) |
+| `/jobs/{id}/replay` | POST | Replay from checkpoint |
+| `/chaos/kill-worker` | POST | Simulate crash (demo) |
+
+### Step 3: Vercel Deployment (Dashboard)
+
+```bash
+# 1. Install Vercel CLI
+npm install -g vercel
+
+# 2. Navigate to dashboard
+cd packages/dashboard
+
+# 3. Deploy to Vercel
+vercel deploy --prod
+
+# 4. Set environment variables in Vercel Dashboard:
+#    NEXT_PUBLIC_API_URL = https://your-api-gateway-url.amazonaws.com/prod
+
+# Or via CLI:
+vercel env add NEXT_PUBLIC_API_URL production
+# Enter: https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/prod
+```
+
+### Step 4: Verify Deployment
+
+```bash
+# Test Lambda API
+curl https://YOUR_API_GATEWAY_URL/prod/ready
+# Expected: OK
+
+# Test creating a job
+curl -X POST https://YOUR_API_GATEWAY_URL/prod/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test-job", "input": {"test": true}}'
+
+# Check Vercel dashboard
+open https://your-app.vercel.app
+```
+
+### Local Development
+
+```bash
+# Terminal 1: Start backend
+npm run dev
+
+# Terminal 2: Start dashboard
+npm run dev:dashboard
 
 # Services:
 # - Dashboard: http://localhost:3000
 # - API:       http://localhost:3001
-# - CockroachDB: http://localhost:8080
 ```
 
-### Option 2: AWS Lambda + CDK
+### Docker Deployment (Alternative)
 
 ```bash
-# Prerequisites
-npm install -g aws-cdk
-aws configure  # Setup AWS credentials
+# For self-hosted deployment
+docker-compose up -d
 
-# Store secrets in AWS Secrets Manager
-aws secretsmanager create-secret --name x404-r/database-url \
-  --secret-string "postgresql://user:pass@your-cockroachdb:26257/x404r"
-
-aws secretsmanager create-secret --name x404-r/gemini-api-key \
-  --secret-string "your-gemini-api-key"
-
-# Deploy Lambda + API Gateway
-cd infrastructure
-npm install
-npx cdk bootstrap  # First time only
-npx cdk deploy
-
-# Output will show:
-# - API Gateway URL: https://xxx.execute-api.region.amazonaws.com/prod
+# Services:
+# - Dashboard:   http://localhost:3000
+# - API:         http://localhost:3001
+# - CockroachDB: http://localhost:8080 (Admin UI)
 ```
-
-### Option 3: Vercel (Dashboard) + AWS Lambda (API)
-
-```bash
-# Deploy Dashboard to Vercel
-cd packages/dashboard
-npx vercel deploy --prod
-
-# Deploy API to AWS Lambda (see Option 2)
-cd ../..
-cd infrastructure
-npx cdk deploy
-```
-
-### CockroachDB Cloud Setup
-
-1. Go to https://cockroachlabs.cloud
-2. Create a free cluster
-3. Get connection string from "Connect" tab
-4. Update `DATABASE_URL` in your `.env` or AWS Secrets Manager
 
 ## Why "x404-r"?
 

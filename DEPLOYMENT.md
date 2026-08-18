@@ -1,136 +1,275 @@
 # x404-r Deployment Guide
 
-## Quick Start (Local)
+## Production Architecture
 
-```bash
-# Start backend API
-npm run dev:server    # http://localhost:3001
-
-# Start dashboard (new terminal)
-npm run dev:dashboard # http://localhost:3000
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         PRODUCTION STACK                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   ┌─────────────────┐         ┌─────────────────────────────────────┐  │
+│   │     Vercel      │         │            AWS                      │  │
+│   │   (Dashboard)   │         │  ┌─────────────┐  ┌─────────────┐  │  │
+│   │                 │────────▶│  │ API Gateway │──│ Supervisor  │  │  │
+│   │   Next.js       │  HTTPS  │  └─────────────┘  │   Lambda    │  │  │
+│   └─────────────────┘         │                   └──────┬──────┘  │  │
+│                               │                          │         │  │
+│                               │  ┌─────────────┐         │         │  │
+│                               │  │ EventBridge │         │         │  │
+│                               │  │ (10s poll)  │         │         │  │
+│                               │  └──────┬──────┘         │         │  │
+│                               │         │                │         │  │
+│                               │         ▼                │         │  │
+│                               │  ┌─────────────┐         │         │  │
+│                               │  │   Worker    │         │         │  │
+│                               │  │   Lambda    │◀────────┘         │  │
+│                               │  └──────┬──────┘                   │  │
+│                               └─────────┼──────────────────────────┘  │
+│                                         │                              │
+│                                         ▼                              │
+│                               ┌─────────────────┐                      │
+│                               │  CockroachDB    │                      │
+│                               │     Cloud       │                      │
+│                               └─────────────────┘                      │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## SDK Publishing
+## 1. CockroachDB Cloud
 
-### 1. Login to npm
+### Create Free Cluster
+
+1. Go to https://cockroachlabs.cloud
+2. Sign up (free, no credit card)
+3. Create cluster → Select "Serverless" (free tier)
+4. Choose region closest to your Lambda (e.g., `us-east-1`)
+5. Click "Connect" → Copy connection string
+
+### Initialize Database
+
 ```bash
-npm login
+# Connect to your cluster
+cockroach sql --url "YOUR_CONNECTION_STRING"
+
+# Run setup script
+\i scripts/setup-db.sql
 ```
 
-### 2. Publish SDK
+Or via psql:
 ```bash
-cd packages/sdk
-npm publish --access public
+psql "YOUR_CONNECTION_STRING" -f scripts/setup-db.sql
 ```
 
-The SDK will be available as `@x404-r/sdk` on npm.
-
-## Docker Deployment
+## 2. AWS Lambda Deployment
 
 ### Prerequisites
-- Docker and Docker Compose installed
-- `.env` file configured
+
+```bash
+# Install AWS CLI
+curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+sudo installer -pkg AWSCLIV2.pkg -target /
+
+# Configure credentials
+aws configure
+# AWS Access Key ID: YOUR_KEY
+# AWS Secret Access Key: YOUR_SECRET
+# Default region: us-east-1
+# Default output format: json
+
+# Install CDK
+npm install -g aws-cdk
+
+# Verify
+aws sts get-caller-identity
+cdk --version
+```
+
+### Store Secrets
+
+```bash
+# Database connection string
+aws secretsmanager create-secret \
+  --name x404-r/database-url \
+  --description "CockroachDB connection string" \
+  --secret-string "postgresql://user:pass@host:26257/x404r?sslmode=verify-full" \
+  --region us-east-1
+
+# AI API key
+aws secretsmanager create-secret \
+  --name x404-r/gemini-api-key \
+  --description "Gemini API key for AI inference" \
+  --secret-string "your-gemini-api-key" \
+  --region us-east-1
+
+# Verify secrets created
+aws secretsmanager list-secrets --region us-east-1
+```
+
+### Build & Deploy
+
+```bash
+# Build worker packages
+cd packages/worker
+npm install
+npm run build
+
+cd ../supervisor
+npm install
+npm run build
+
+# Deploy infrastructure
+cd ../../infrastructure
+npm install
+
+# Bootstrap CDK (first time only)
+npx cdk bootstrap
+
+# Deploy
+npx cdk deploy CrashProofStack \
+  --parameters databaseSecretArn=arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:x404-r/database-url \
+  --parameters geminiApiKeySecretArn=arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:x404-r/gemini-api-key
+
+# Note the outputs:
+# CrashProofStack.ApiUrl = https://xxxxx.execute-api.us-east-1.amazonaws.com/prod
+```
+
+### Verify Lambda Deployment
+
+```bash
+# Test health endpoint
+curl https://YOUR_API_URL/prod/ready
+# Expected: OK
+
+# Test job creation
+curl -X POST https://YOUR_API_URL/prod/jobs/demo \
+  -H "Content-Type: application/json"
+
+# Check CloudWatch logs
+aws logs tail /aws/lambda/CrashProofStack-WorkerLambda --follow
+```
+
+## 3. Vercel Deployment (Dashboard)
 
 ### Deploy
-```bash
-# Build and start all services
-docker-compose up -d
 
-# View logs
-docker-compose logs -f
-
-# Stop
-docker-compose down
-```
-
-Services:
-- **Dashboard**: http://localhost:3000
-- **API**: http://localhost:3001
-- **CockroachDB Admin**: http://localhost:8080
-
-## Cloud Deployment Options
-
-### Option 1: AWS (EC2 + Docker)
-
-```bash
-# On EC2 instance
-git clone <your-repo>
-cd x404-r
-cp .env.example .env
-# Edit .env with your credentials
-
-docker-compose up -d
-```
-
-### Option 2: Vercel (Dashboard) + AWS Lambda (API)
-
-**Dashboard to Vercel:**
 ```bash
 cd packages/dashboard
+
+# Install Vercel CLI
+npm install -g vercel
+
+# Login
+vercel login
+
+# Deploy
 vercel deploy --prod
 ```
 
-**API to Lambda (CDK):**
+### Set Environment Variables
+
+Via Vercel Dashboard:
+1. Go to your project settings
+2. Navigate to "Environment Variables"
+3. Add:
+   - `NEXT_PUBLIC_API_URL` = `https://YOUR_API_GATEWAY_URL/prod`
+
+Via CLI:
 ```bash
-cd infrastructure
-npm install
-npx cdk deploy
+vercel env add NEXT_PUBLIC_API_URL production
+# Enter your API Gateway URL
 ```
 
-### Option 3: Railway/Render (Easiest)
+### Custom Domain (Optional)
 
-1. Connect your GitHub repo
-2. Set environment variables
-3. Deploy
-
-## Environment Variables
-
-Required in `.env`:
 ```bash
-# Database
-DATABASE_URL=postgresql://user:pass@host:26257/x404r
-
-# AI Provider
-GEMINI_API_KEY=your-key
-
-# Optional
-DEMO_MODE=true
+vercel domains add x404r.yourdomain.com
 ```
 
-## CockroachDB Setup
+## 4. SDK Installation
 
-### Local (Docker)
+Once deployed, users can install the SDK:
+
 ```bash
-docker run -d --name cockroach \
-  -p 26257:26257 -p 8080:8080 \
-  cockroachdb/cockroach:v23.2.0 start-single-node --insecure
+npm install @shalwin04/x404r-sdk
 ```
 
-### Cloud (CockroachDB Cloud)
-1. Go to https://cockroachlabs.cloud
-2. Create free cluster
-3. Get connection string
-4. Update `DATABASE_URL` in `.env`
+### Embedded Mode (Self-hosted)
+```typescript
+import { x404r } from '@shalwin04/x404r-sdk';
 
-## Hackathon Submission Checklist
+const runtime = await new x404r({
+  mode: 'embedded',
+  connectionString: process.env.DATABASE_URL,
+  ai: { provider: 'gemini', apiKey: process.env.GEMINI_API_KEY }
+}).ready();
+```
 
-- [x] SDK with dual mode (embedded/cloud)
-- [x] Dashboard for visualization
-- [x] CockroachDB integration (2+ tools)
-  - FOR UPDATE SKIP LOCKED
-  - Vector storage
-  - Distributed transactions
-- [x] AWS integration (Lambda ready)
-- [x] Docker deployment ready
-- [x] MIT License
-- [ ] npm publish
-- [ ] Live demo URL
-- [ ] Video demo (< 3 min)
+### Cloud Mode (Use your Lambda API)
+```typescript
+import { x404r } from '@shalwin04/x404r-sdk';
 
-## URLs After Deployment
+const runtime = new x404r({
+  mode: 'cloud',
+  apiKey: 'your-api-key',
+  baseUrl: 'https://YOUR_API_GATEWAY_URL/prod'
+});
 
-| Service | Local | Production |
-|---------|-------|------------|
-| Dashboard | http://localhost:3000 | https://x404r.vercel.app |
-| API | http://localhost:3001 | https://api.x404r.io |
-| SDK | npm pack (local) | npm install @x404-r/sdk |
+const job = await runtime.submit('workflow-name', { input: 'data' });
+```
+
+## 5. Monitoring
+
+### CloudWatch Dashboards
+
+```bash
+# View Lambda metrics
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/Lambda \
+  --metric-name Invocations \
+  --dimensions Name=FunctionName,Value=CrashProofStack-WorkerLambda \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 300 \
+  --statistics Sum
+```
+
+### CockroachDB Console
+
+- Go to https://cockroachlabs.cloud
+- Select your cluster
+- View SQL Activity, Metrics, and Insights
+
+## Troubleshooting
+
+### Lambda Timeout
+```bash
+# Increase timeout (default 5 min max)
+aws lambda update-function-configuration \
+  --function-name CrashProofStack-WorkerLambda \
+  --timeout 300
+```
+
+### Database Connection Issues
+```bash
+# Test connection from local
+psql "YOUR_CONNECTION_STRING" -c "SELECT 1"
+
+# Check Lambda can reach CockroachDB
+# Ensure security groups allow outbound HTTPS
+```
+
+### Vercel Build Failures
+```bash
+# Clear cache and redeploy
+vercel --force
+```
+
+## Cost Estimates
+
+| Service | Free Tier | Estimated Monthly |
+|---------|-----------|-------------------|
+| CockroachDB Serverless | 10GB, 50M RUs | $0 |
+| AWS Lambda | 1M requests | $0-5 |
+| API Gateway | 1M requests | $0-3 |
+| Vercel | 100GB bandwidth | $0 |
+| **Total** | | **$0-10/month** |

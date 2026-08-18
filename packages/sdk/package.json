@@ -1,6 +1,6 @@
 {
   "name": "@shalwin04/x404r-sdk",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "The runtime where context is never lost - crash-proof AI agents on CockroachDB",
   "main": "dist/index.js",
   "module": "dist/index.js",

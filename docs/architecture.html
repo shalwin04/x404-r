@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>x404-r Architecture</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+      min-height: 100vh;
+      padding: 40px;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #00d4ff, #7c3aed, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .header .tagline {
+      font-size: 1.2rem;
+      color: #94a3b8;
+      font-weight: 300;
+    }
+
+    .architecture {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .layer {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 30px;
+      position: relative;
+    }
+
+    .layer-title {
+      position: absolute;
+      top: -12px;
+      left: 30px;
+      background: #1a1a2e;
+      padding: 0 15px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #64748b;
+    }
+
+    .layer-content {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+
+    .component {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 25px;
+      min-width: 180px;
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .component:hover {
+      transform: translateY(-5px);
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .component-icon {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-size: 1.5rem;
+    }
+
+    .component-name {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .component-desc {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    /* Layer Colors */
+    .client-layer .layer-title { color: #60a5fa; }
+    .client-layer .component { border-color: rgba(96, 165, 250, 0.3); }
+    .client-layer .component-icon { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+
+    .sdk-layer .layer-title { color: #a78bfa; }
+    .sdk-layer .component { border-color: rgba(167, 139, 250, 0.3); }
+    .sdk-layer .component-icon { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+
+    .aws-layer .layer-title { color: #fb923c; }
+    .aws-layer .component { border-color: rgba(251, 146, 60, 0.3); }
+    .aws-layer .component-icon { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
+
+    .db-layer .layer-title { color: #4ade80; }
+    .db-layer .component { border-color: rgba(74, 222, 128, 0.3); }
+    .db-layer .component-icon { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
+
+    /* Connection Lines */
+    .connector {
+      display: flex;
+      justify-content: center;
+      padding: 15px 0;
+    }
+
+    .connector-line {
+      width: 4px;
+      height: 40px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%);
+      border-radius: 2px;
+      position: relative;
+    }
+
+    .connector-line::after {
+      content: '▼';
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.3);
+      font-size: 12px;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .feature {
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+      border-radius: 10px;
+      padding: 15px;
+      font-size: 0.85rem;
+    }
+
+    .feature-name {
+      font-weight: 600;
+      color: #4ade80;
+      margin-bottom: 5px;
+    }
+
+    .feature-desc {
+      color: #94a3b8;
+      font-size: 0.8rem;
+    }
+
+    /* Data Flow */
+    .data-flow {
+      margin-top: 50px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 30px;
+    }
+
+    .data-flow h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #f472b6;
+      font-size: 1.5rem;
+    }
+
+    .flow-steps {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .flow-step {
+      flex: 1;
+      min-width: 250px;
+      max-width: 350px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 16px;
+      padding: 25px;
+      text-align: center;
+    }
+
+    .flow-step-number {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #7c3aed, #f472b6);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 15px;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+
+    .flow-step h3 {
+      color: #e2e8f0;
+      margin-bottom: 10px;
+    }
+
+    .flow-step p {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .flow-step .code {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 15px;
+      font-family: 'Fira Code', 'Monaco', monospace;
+      font-size: 0.75rem;
+      color: #4ade80;
+      text-align: left;
+      overflow-x: auto;
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 10px;
+    }
+
+    .badge-aws { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
+    .badge-crdb { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
+    .badge-sdk { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-bottom: 20px;
+    }
+
+    .footer-link {
+      color: #64748b;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.3s;
+    }
+
+    .footer-link:hover {
+      color: #fff;
+    }
+
+    .footer-tagline {
+      color: #475569;
+      font-size: 0.85rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header h1 { font-size: 2rem; }
+      .layer-content { gap: 15px; }
+      .component { min-width: 140px; padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>x404-r</h1>
+      <p class="tagline">The runtime where context is never lost</p>
+    </header>
+
+    <!-- Architecture Diagram -->
+    <div class="architecture">
+
+      <!-- Client Layer -->
+      <div class="layer client-layer">
+        <span class="layer-title">Client Layer</span>
+        <div class="layer-content">
+          <div class="component">
+            <div class="component-icon">📱</div>
+            <div class="component-name">Your Application</div>
+            <div class="component-desc">Node.js / TypeScript app using the SDK</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">📊</div>
+            <div class="component-name">Dashboard</div>
+            <div class="component-desc">Next.js UI with React Flow DAG visualization</div>
+            <span class="badge badge-aws">Vercel</span>
+          </div>
+          <div class="component">
+            <div class="component-icon">⌨️</div>
+            <div class="component-name">CLI / API</div>
+            <div class="component-desc">Direct API access for automation</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div></div>
+
+      <!-- SDK Layer -->
+      <div class="layer sdk-layer">
+        <span class="layer-title">SDK Layer — @shalwin04/x404r-sdk</span>
+        <div class="layer-content">
+          <div class="component">
+            <div class="component-icon">🔧</div>
+            <div class="component-name">x404r Client</div>
+            <div class="component-desc">Main entry point with dual-mode support</div>
+            <span class="badge badge-sdk">npm</span>
+          </div>
+          <div class="component">
+            <div class="component-icon">📋</div>
+            <div class="component-name">Workflow Builder</div>
+            <div class="component-desc">DAG definition with step dependencies</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">⚙️</div>
+            <div class="component-name">Worker Manager</div>
+            <div class="component-desc">Task claiming, heartbeats, checkpointing</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">🤖</div>
+            <div class="component-name">AI Provider</div>
+            <div class="component-desc">Gemini, OpenAI, Anthropic abstraction</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div></div>
+
+      <!-- AWS Layer -->
+      <div class="layer aws-layer">
+        <span class="layer-title">AWS Compute Layer</span>
+        <div class="layer-content">
+          <div class="component">
+            <div class="component-icon">λ</div>
+            <div class="component-name">Worker Lambda</div>
+            <div class="component-desc">Stateless task execution with checkpointing</div>
+            <span class="badge badge-aws">Lambda</span>
+          </div>
+          <div class="component">
+            <div class="component-icon">λ</div>
+            <div class="component-name">Supervisor Lambda</div>
+            <div class="component-desc">Job creation, API routing, auth</div>
+            <span class="badge badge-aws">Lambda</span>
+          </div>
+          <div class="component">
+            <div class="component-icon">🔗</div>
+            <div class="component-name">API Gateway</div>
+            <div class="component-desc">REST API with CORS</div>
+            <span class="badge badge-aws">API GW</span>
+          </div>
+          <div class="component">
+            <div class="component-icon">⏰</div>
+            <div class="component-name">EventBridge</div>
+            <div class="component-desc">Scheduled polling (1 min / 2 min)</div>
+            <span class="badge badge-aws">Events</span>
+          </div>
+          <div class="component">
+            <div class="component-icon">🔐</div>
+            <div class="component-name">Secrets Manager</div>
+            <div class="component-desc">DB_URL, API keys secure storage</div>
+            <span class="badge badge-aws">Secrets</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div></div>
+
+      <!-- CockroachDB Layer -->
+      <div class="layer db-layer">
+        <span class="layer-title">CockroachDB Serverless — Agentic Memory Layer</span>
+        <div class="layer-content">
+          <div class="component">
+            <div class="component-icon">🏢</div>
+            <div class="component-name">tenants</div>
+            <div class="component-desc">Multi-tenant isolation, plans, limits</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">📁</div>
+            <div class="component-name">jobs</div>
+            <div class="component-desc">Workflow instances, status, I/O</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">📌</div>
+            <div class="component-name">task_nodes</div>
+            <div class="component-desc">DAG nodes with state & dependencies</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">💾</div>
+            <div class="component-name">checkpoints</div>
+            <div class="component-desc">Atomic state snapshots for recovery</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">🧠</div>
+            <div class="component-name">memory_vectors</div>
+            <div class="component-desc">Embeddings for agent learning</div>
+          </div>
+        </div>
+
+        <!-- CockroachDB Features -->
+        <div class="features-grid">
+          <div class="feature">
+            <div class="feature-name">FOR UPDATE SKIP LOCKED</div>
+            <div class="feature-desc">Atomic task claiming without race conditions</div>
+          </div>
+          <div class="feature">
+            <div class="feature-name">Distributed Transactions</div>
+            <div class="feature-desc">Consistent checkpoints across crashes</div>
+          </div>
+          <div class="feature">
+            <div class="feature-name">JSON Columns</div>
+            <div class="feature-desc">Flexible state storage, no migrations</div>
+          </div>
+          <div class="feature">
+            <div class="feature-name">Vector Storage</div>
+            <div class="feature-desc">Agent memory with similarity search</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Flow Section -->
+    <div class="data-flow">
+      <h2>🔄 Crash Recovery Flow</h2>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-step-number">1</div>
+          <h3>Normal Execution</h3>
+          <p>Worker executes task, calling checkpoint() to save progress atomically to CockroachDB.</p>
+          <div class="code">await ctx.checkpoint({ progress: 3 });</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-number">2</div>
+          <h3>Crash Happens</h3>
+          <p>Worker crashes (Lambda timeout, OOM, network error). Last checkpoint is preserved in DB.</p>
+          <div class="code">💥 Worker died at step 3<br>✅ CockroachDB has state: {p: 3}</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-number">3</div>
+          <h3>Automatic Recovery</h3>
+          <p>New worker claims task, loads checkpoint, resumes from last saved state. Zero progress lost.</p>
+          <div class="code">let p = ctx.state.progress || 0;<br>// p = 3, continue from here!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-links">
+        <a href="https://github.com/shalwin04/x404-r" class="footer-link">GitHub</a>
+        <a href="https://www.npmjs.com/package/@shalwin04/x404r-sdk" class="footer-link">npm</a>
+        <a href="https://gb74j85no4.execute-api.us-east-1.amazonaws.com/prod" class="footer-link">API</a>
+      </div>
+      <p class="footer-tagline">x404-r — Context is never lost. Built for CockroachDB × AWS Hackathon 2026.</p>
+    </footer>
+  </div>
+</body>
+</html>

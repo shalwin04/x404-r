@@ -101,9 +101,21 @@ async function handleApiGateway(
   db: Database,
   event: APIGatewayProxyEvent
 ): Promise<SupervisorResult> {
+  const path = event.path;
+  const method = event.httpMethod;
+
   // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
+  if (method === 'OPTIONS') {
     return { statusCode: 200, body: '', headers: corsHeaders };
+  }
+
+  // Health check (no auth required)
+  if (method === 'GET' && path === '/ready') {
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }),
+      headers: corsHeaders,
+    };
   }
 
   // Extract tenant context from Authorization header
@@ -123,8 +135,6 @@ async function handleApiGateway(
   await recordUsageEvent(db, tenantContext, 'api_call');
 
   const tenantDb = new TenantDatabase(db, tenantContext);
-  const path = event.path;
-  const method = event.httpMethod;
   const body = event.body ? JSON.parse(event.body) : {};
 
   // Route handling
