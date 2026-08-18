@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useState } from 'react';
+import Link from "next/link";
+import { useState } from "react";
 
 export default function LandingPage() {
   const [copied, setCopied] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
 
   const copyInstall = () => {
-    navigator.clipboard.writeText('npm install @shalwin04/x404r-sdk');
+    navigator.clipboard.writeText("npm install @shalwin04/x404r-sdk");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -23,25 +23,63 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+    <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 glass border-b"
+        style={{ borderColor: "var(--border-subtle)" }}
+      >
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold" style={{ letterSpacing: '-0.02em' }}>x404-r</span>
-            <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
+            <span
+              className="text-lg font-semibold"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              x404-r
+            </span>
+            <span
+              className="text-xs px-1.5 py-0.5 rounded font-mono"
+              style={{
+                background: "var(--bg-elevated)",
+                color: "var(--text-muted)",
+              }}
+            >
               beta
             </span>
           </div>
           <div className="flex items-center gap-6">
-            <a href="#comparison" className="text-sm" style={{ color: 'var(--text-muted)' }}>Results</a>
-            <a href="#sdk" className="text-sm" style={{ color: 'var(--text-muted)' }}>SDK</a>
-            <a href="#features" className="text-sm" style={{ color: 'var(--text-muted)' }}>Features</a>
-            <Link href="/monitor" className="text-sm" style={{ color: 'var(--text-muted)' }}>Monitor</Link>
+            <a
+              href="#comparison"
+              className="text-sm"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Results
+            </a>
+            <a
+              href="#sdk"
+              className="text-sm"
+              style={{ color: "var(--text-muted)" }}
+            >
+              SDK
+            </a>
+            <a
+              href="#features"
+              className="text-sm"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Features
+            </a>
+            <Link
+              href="/monitor"
+              className="text-sm"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Monitor
+            </Link>
             <Link
               href="/dashboard"
               className="text-sm px-4 py-2 rounded-lg font-medium"
-              style={{ background: 'var(--accent)', color: 'white' }}
+              style={{ background: "var(--accent)", color: "white" }}
             >
               Get Started
             </Link>
@@ -52,39 +90,66 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-4xl mx-auto text-center animate-fade-in">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-8" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}>
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-8"
+            style={{
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
             <span className="status-dot running"></span>
-            <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>Built for CockroachDB x AWS Hackathon</span>
+            <span
+              className="text-xs font-mono"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Built for CockroachDB x AWS Hackathon
+            </span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-bold mb-6" style={{ letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-            The runtime where<br />
-            <span style={{ color: 'var(--accent)' }}>context is never lost</span>
+          <h1
+            className="text-5xl md:text-6xl font-bold mb-6"
+            style={{ letterSpacing: "-0.03em", lineHeight: 1.1 }}
+          >
+            The runtime where
+            <br />
+            <span style={{ color: "var(--accent)" }}>
+              context is never lost
+            </span>
           </h1>
 
-          <p className="text-xl mb-10 max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            Database-native infrastructure for crash-proof AI agents.
-            State lives in CockroachDB, not memory. Workers can die anytime —
-            agents resume exactly where they left off.
+          <p
+            className="text-xl mb-10 max-w-2xl mx-auto"
+            style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}
+          >
+            Database-native infrastructure for crash-proof AI agents. State
+            lives in CockroachDB, not memory. Workers can die anytime — agents
+            resume exactly where they left off.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/create"
               className="px-6 py-3 rounded-lg text-base font-medium"
-              style={{ background: 'var(--accent)', color: 'white' }}
+              style={{ background: "var(--accent)", color: "white" }}
             >
               Create Agent
             </Link>
             <button
               onClick={copyInstall}
               className="px-6 py-3 rounded-lg text-base font-mono flex items-center gap-3"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-default)",
+              }}
             >
-              <span style={{ color: 'var(--text-muted)' }}>$</span>
+              <span style={{ color: "var(--text-muted)" }}>$</span>
               <span>npm install @shalwin04/x404r-sdk</span>
-              <span style={{ color: copied ? 'var(--success)' : 'var(--text-muted)' }}>
-                {copied ? '✓' : '⎘'}
+              <span
+                style={{
+                  color: copied ? "var(--success)" : "var(--text-muted)",
+                }}
+              >
+                {copied ? "✓" : "⎘"}
               </span>
             </button>
           </div>
@@ -94,14 +159,40 @@ export default function LandingPage() {
       {/* Code Example */}
       <section className="py-16 px-6">
         <div className="max-w-4xl mx-auto">
-          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-            <div className="px-4 py-3 flex items-center gap-2 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
-              <div className="w-3 h-3 rounded-full" style={{ background: '#ff5f57' }}></div>
-              <div className="w-3 h-3 rounded-full" style={{ background: '#febc2e' }}></div>
-              <div className="w-3 h-3 rounded-full" style={{ background: '#28c840' }}></div>
-              <span className="ml-3 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>crash-proof-agent.ts</span>
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            <div
+              className="px-4 py-3 flex items-center gap-2 border-b"
+              style={{ borderColor: "var(--border-subtle)" }}
+            >
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ background: "#ff5f57" }}
+              ></div>
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ background: "#febc2e" }}
+              ></div>
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ background: "#28c840" }}
+              ></div>
+              <span
+                className="ml-3 text-xs font-mono"
+                style={{ color: "var(--text-muted)" }}
+              >
+                crash-proof-agent.ts
+              </span>
             </div>
-            <pre className="p-6 text-sm font-mono overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>
+            <pre
+              className="p-6 text-sm font-mono overflow-x-auto"
+              style={{ color: "var(--text-secondary)" }}
+            >
               <code>{`import { x404r } from '@shalwin04/x404r-sdk';
 
 // Initialize the crash-proof runtime
@@ -137,196 +228,154 @@ const result = await workflow.run({ items }, { wait: true });`}</code>
         </div>
       </section>
 
-      {/* Interactive Comparison Demo */}
-      <section id="comparison" className="py-20 px-6" style={{ background: 'var(--bg-secondary)' }}>
-        <div className="max-w-5xl mx-auto">
+      {/* Benchmark Results */}
+      <section
+        id="comparison"
+        className="py-20 px-6"
+        style={{ background: "var(--bg-secondary)" }}
+      >
+        <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-              <span className="text-xs font-medium" style={{ color: 'var(--error)' }}>CRASH TEST</span>
-            </div>
-            <h2 className="text-3xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
-              What happens when your agent crashes?
+            <h2
+              className="text-3xl font-bold mb-4"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              Real Benchmark Results
             </h2>
-            <p className="max-w-2xl mx-auto" style={{ color: 'var(--text-muted)' }}>
-              Same 5-step workflow. Same crash at step 3. Watch the difference.
+            <p
+              className="max-w-2xl mx-auto"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Same 5-step task. Same crash at step 3. Real Gemini API calls.
             </p>
           </div>
 
-          {/* Side-by-Side Race Visualization */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-            {/* x404-r Side */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
-              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-subtle)', background: 'rgba(34, 197, 94, 0.05)' }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--success)' }}></div>
-                  <span className="font-semibold" style={{ color: 'var(--success)' }}>x404-r SDK</span>
-                </div>
-                <span className="text-xs px-2 py-1 rounded-full font-mono" style={{ background: 'rgba(34, 197, 94, 0.1)', color: 'var(--success)' }}>Crash-proof</span>
+          {/* Comparison Table */}
+          <div
+            className="rounded-2xl overflow-hidden mb-8"
+            style={{
+              background: "var(--bg-primary)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            <div
+              className="grid grid-cols-3 text-sm font-medium border-b"
+              style={{ borderColor: "var(--border-subtle)" }}
+            >
+              <div className="p-4" style={{ color: "var(--text-muted)" }}></div>
+              <div
+                className="p-4 text-center"
+                style={{ background: "rgba(34, 197, 94, 0.05)" }}
+              >
+                <span style={{ color: "var(--success)" }}>x404-r SDK</span>
               </div>
-              <div className="p-5">
-                {/* Task Steps */}
-                <div className="space-y-3 mb-6">
-                  {['Parse input', 'Analyze code', 'Generate plan', 'Apply changes', 'Verify output'].map((step, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{
-                        background: i < 3 ? 'var(--success)' : i === 2 ? 'rgba(34, 197, 94, 0.2)' : 'var(--bg-elevated)',
-                        color: i < 3 ? 'white' : 'var(--text-muted)',
-                        border: i === 2 ? '2px solid var(--success)' : 'none'
-                      }}>
-                        {i < 2 ? '✓' : i === 2 ? '↻' : i + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm" style={{ color: i <= 2 ? 'var(--text-primary)' : 'var(--text-muted)' }}>{step}</span>
-                          {i === 2 && <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: 'rgba(34, 197, 94, 0.1)', color: 'var(--success)' }}>checkpoint saved</span>}
-                        </div>
-                        <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
-                          <div className="h-full rounded-full transition-all duration-500" style={{
-                            background: i < 2 ? 'var(--success)' : i === 2 ? 'linear-gradient(90deg, var(--success), var(--accent))' : 'transparent',
-                            width: i < 2 ? '100%' : i === 2 ? '60%' : '0%'
-                          }}></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Crash Event */}
-                <div className="p-3 rounded-xl mb-4 flex items-center gap-3" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                  <span className="text-xl">💥</span>
-                  <div>
-                    <div className="text-sm font-medium" style={{ color: 'var(--error)' }}>Worker crashed at step 3</div>
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>OOM / timeout / network error</div>
-                  </div>
-                </div>
-
-                {/* Recovery */}
-                <div className="p-3 rounded-xl flex items-center gap-3" style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
-                  <span className="text-xl">✨</span>
-                  <div>
-                    <div className="text-sm font-medium" style={{ color: 'var(--success)' }}>Resumed from checkpoint</div>
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>New worker picked up at step 3, 60% complete</div>
-                  </div>
-                </div>
+              <div
+                className="p-4 text-center"
+                style={{ background: "rgba(239, 68, 68, 0.05)" }}
+              >
+                <span style={{ color: "var(--error)" }}>Vanilla</span>
               </div>
             </div>
-
-            {/* Vanilla Side */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-subtle)', background: 'rgba(239, 68, 68, 0.05)' }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--error)' }}></div>
-                  <span className="font-semibold" style={{ color: 'var(--error)' }}>Traditional Agent</span>
+            {[
+              { label: "Total AI Calls", sdk: "5", vanilla: "7" },
+              { label: "Wasted AI Calls", sdk: "0", vanilla: "2" },
+              { label: "Total Tokens", sdk: "12,609", vanilla: "19,469" },
+              { label: "Wasted Tokens", sdk: "250", vanilla: "3,889" },
+              { label: "Total Cost", sdk: "$0.00352", vanilla: "$0.00558" },
+              { label: "Total Time", sdk: "90.2s", vanilla: "184.9s" },
+            ].map((row, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-3 text-sm border-b last:border-b-0"
+                style={{ borderColor: "var(--border-subtle)" }}
+              >
+                <div className="p-4" style={{ color: "var(--text-muted)" }}>
+                  {row.label}
                 </div>
-                <span className="text-xs px-2 py-1 rounded-full font-mono" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--error)' }}>No checkpoints</span>
+                <div
+                  className="p-4 text-center font-mono font-medium"
+                  style={{
+                    color: "var(--success)",
+                    background: "rgba(34, 197, 94, 0.05)",
+                  }}
+                >
+                  {row.sdk}
+                </div>
+                <div
+                  className="p-4 text-center font-mono font-medium"
+                  style={{
+                    color: "var(--error)",
+                    background: "rgba(239, 68, 68, 0.05)",
+                  }}
+                >
+                  {row.vanilla}
+                </div>
               </div>
-              <div className="p-5">
-                {/* Task Steps - First attempt */}
-                <div className="space-y-3 mb-6">
-                  {['Parse input', 'Analyze code', 'Generate plan', 'Apply changes', 'Verify output'].map((step, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{
-                        background: i < 2 ? 'var(--text-muted)' : 'var(--bg-elevated)',
-                        color: i < 2 ? 'white' : 'var(--text-muted)',
-                        textDecoration: i < 2 ? 'line-through' : 'none',
-                        opacity: i < 3 ? 0.5 : 1
-                      }}>
-                        {i < 2 ? '✓' : i + 1}
-                      </div>
-                      <div className="flex-1" style={{ opacity: i < 3 ? 0.5 : 1 }}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm" style={{ color: 'var(--text-muted)', textDecoration: i < 3 ? 'line-through' : 'none' }}>{step}</span>
-                          {i < 2 && <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--error)' }}>wasted</span>}
-                        </div>
-                        <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
-                          <div className="h-full rounded-full" style={{
-                            background: i < 2 ? 'var(--text-muted)' : 'transparent',
-                            width: i < 2 ? '100%' : '0%'
-                          }}></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            ))}
+          </div>
 
-                {/* Crash Event */}
-                <div className="p-3 rounded-xl mb-4 flex items-center gap-3" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                  <span className="text-xl">💥</span>
-                  <div>
-                    <div className="text-sm font-medium" style={{ color: 'var(--error)' }}>Worker crashed at step 3</div>
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>All progress lost!</div>
-                  </div>
-                </div>
-
-                {/* Restart */}
-                <div className="p-3 rounded-xl flex items-center gap-3" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                  <span className="text-xl">🔄</span>
-                  <div>
-                    <div className="text-sm font-medium" style={{ color: 'var(--warning)' }}>Restarting from scratch</div>
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Must redo steps 1-2 (2 AI calls wasted)</div>
-                  </div>
-                </div>
+          {/* Key Stats */}
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            <div
+              className="p-6 rounded-2xl text-center"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="text-3xl font-bold mb-1"
+                style={{ color: "var(--success)" }}
+              >
+                29%
+              </div>
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Fewer AI calls
+              </div>
+            </div>
+            <div
+              className="p-6 rounded-2xl text-center"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="text-3xl font-bold mb-1"
+                style={{ color: "var(--success)" }}
+              >
+                35%
+              </div>
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Tokens saved
+              </div>
+            </div>
+            <div
+              className="p-6 rounded-2xl text-center"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="text-3xl font-bold mb-1"
+                style={{ color: "var(--success)" }}
+              >
+                2x
+              </div>
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Faster recovery
               </div>
             </div>
           </div>
 
-          {/* Results Comparison */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="p-5 rounded-2xl text-center" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="text-2xl font-bold" style={{ color: 'var(--success)' }}>5</span>
-                <span className="text-lg" style={{ color: 'var(--text-muted)' }}>vs</span>
-                <span className="text-2xl font-bold" style={{ color: 'var(--error)' }}>7</span>
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>AI Calls</div>
-            </div>
-            <div className="p-5 rounded-2xl text-center" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="text-2xl font-bold" style={{ color: 'var(--success)' }}>12.6k</span>
-                <span className="text-lg" style={{ color: 'var(--text-muted)' }}>vs</span>
-                <span className="text-2xl font-bold" style={{ color: 'var(--error)' }}>19.5k</span>
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Tokens</div>
-            </div>
-            <div className="p-5 rounded-2xl text-center" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="text-2xl font-bold" style={{ color: 'var(--success)' }}>90s</span>
-                <span className="text-lg" style={{ color: 'var(--text-muted)' }}>vs</span>
-                <span className="text-2xl font-bold" style={{ color: 'var(--error)' }}>185s</span>
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Time</div>
-            </div>
-            <div className="p-5 rounded-2xl text-center" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="text-2xl font-bold" style={{ color: 'var(--success)' }}>$0.004</span>
-                <span className="text-lg" style={{ color: 'var(--text-muted)' }}>vs</span>
-                <span className="text-2xl font-bold" style={{ color: 'var(--error)' }}>$0.006</span>
-              </div>
-              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Cost</div>
-            </div>
-          </div>
-
-          {/* Savings Banner */}
-          <div className="p-6 rounded-2xl text-center" style={{ background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
-            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
-              <div>
-                <div className="text-4xl font-bold mb-1" style={{ color: 'var(--success)' }}>29%</div>
-                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Fewer AI calls</div>
-              </div>
-              <div className="hidden md:block w-px h-12" style={{ background: 'var(--border-subtle)' }}></div>
-              <div>
-                <div className="text-4xl font-bold mb-1" style={{ color: 'var(--success)' }}>35%</div>
-                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Tokens saved</div>
-              </div>
-              <div className="hidden md:block w-px h-12" style={{ background: 'var(--border-subtle)' }}></div>
-              <div>
-                <div className="text-4xl font-bold mb-1" style={{ color: 'var(--success)' }}>2x</div>
-                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Faster recovery</div>
-              </div>
-            </div>
-            <p className="mt-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Real benchmark with Gemini 2.5 Flash. Traditional agent wasted 2 AI calls; x404-r wasted zero.
-            </p>
+          {/* Summary */}
+          <div
+            className="text-center text-sm"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <p>Vanilla wasted 2 AI calls and restarted from scratch.</p>
+            <p>x404-r resumed from checkpoint with zero wasted work.</p>
           </div>
         </div>
       </section>
@@ -335,38 +384,79 @@ const result = await workflow.run({ items }, { wait: true });`}</code>
       <section id="sdk" className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-              <span className="text-xs font-medium" style={{ color: 'var(--accent)' }}>SDK</span>
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
+              style={{
+                background: "rgba(59, 130, 246, 0.1)",
+                border: "1px solid rgba(59, 130, 246, 0.2)",
+              }}
+            >
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--accent)" }}
+              >
+                SDK
+              </span>
             </div>
-            <h2 className="text-3xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
+            <h2
+              className="text-3xl font-bold mb-4"
+              style={{ letterSpacing: "-0.02em" }}
+            >
               @shalwin04/x404r-sdk
             </h2>
-            <p className="max-w-2xl mx-auto" style={{ color: 'var(--text-muted)' }}>
+            <p
+              className="max-w-2xl mx-auto"
+              style={{ color: "var(--text-muted)" }}
+            >
               Published on npm. 78 tests passing. TypeScript-first.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Install */}
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <span className="text-lg">📦</span> Installation
               </h3>
-              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
-                <pre className="p-4 text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-{`npm install @shalwin04/x404r-sdk`}
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                <pre
+                  className="p-4 text-sm font-mono"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {`npm install @shalwin04/x404r-sdk`}
                 </pre>
               </div>
             </div>
 
             {/* Initialize */}
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <span className="text-lg">🔧</span> Initialize
               </h3>
-              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
-                <pre className="p-4 text-sm font-mono overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>
-{`const runtime = await new x404r({
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                <pre
+                  className="p-4 text-sm font-mono overflow-x-auto"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {`const runtime = await new x404r({
   connectionString: process.env.DATABASE_URL,
   ai: { provider: 'gemini', apiKey: '...' }
 }).ready();`}
@@ -376,48 +466,149 @@ const result = await workflow.run({ items }, { wait: true });`}</code>
           </div>
 
           {/* Core APIs */}
-          <div className="p-6 rounded-2xl mb-8" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+          <div
+            className="p-6 rounded-2xl mb-8"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
             <h3 className="font-semibold mb-6 flex items-center gap-2">
               <span className="text-lg">🛠️</span> Core APIs
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
-                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>ctx.checkpoint(state)</code>
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Save state atomically to CockroachDB. Survives any crash.</p>
+              <div
+                className="p-4 rounded-lg"
+                style={{ background: "var(--bg-primary)" }}
+              >
+                <code
+                  className="text-sm font-mono"
+                  style={{ color: "var(--accent)" }}
+                >
+                  ctx.checkpoint(state)
+                </code>
+                <p
+                  className="text-xs mt-2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Save state atomically to CockroachDB. Survives any crash.
+                </p>
               </div>
-              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
-                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>ctx.state</code>
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Access last checkpoint. Resume from where you left off.</p>
+              <div
+                className="p-4 rounded-lg"
+                style={{ background: "var(--bg-primary)" }}
+              >
+                <code
+                  className="text-sm font-mono"
+                  style={{ color: "var(--accent)" }}
+                >
+                  ctx.state
+                </code>
+                <p
+                  className="text-xs mt-2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Access last checkpoint. Resume from where you left off.
+                </p>
               </div>
-              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
-                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>ctx.ai.generate(prompt)</code>
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Call AI with automatic token tracking and cost calculation.</p>
+              <div
+                className="p-4 rounded-lg"
+                style={{ background: "var(--bg-primary)" }}
+              >
+                <code
+                  className="text-sm font-mono"
+                  style={{ color: "var(--accent)" }}
+                >
+                  ctx.ai.generate(prompt)
+                </code>
+                <p
+                  className="text-xs mt-2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Call AI with automatic token tracking and cost calculation.
+                </p>
               </div>
-              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
-                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>runtime.workflow(name, config)</code>
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Define multi-step workflows with dependencies (DAG).</p>
+              <div
+                className="p-4 rounded-lg"
+                style={{ background: "var(--bg-primary)" }}
+              >
+                <code
+                  className="text-sm font-mono"
+                  style={{ color: "var(--accent)" }}
+                >
+                  runtime.workflow(name, config)
+                </code>
+                <p
+                  className="text-xs mt-2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Define multi-step workflows with dependencies (DAG).
+                </p>
               </div>
-              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
-                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>runtime.worker(options)</code>
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Create stateless workers with configurable concurrency.</p>
+              <div
+                className="p-4 rounded-lg"
+                style={{ background: "var(--bg-primary)" }}
+              >
+                <code
+                  className="text-sm font-mono"
+                  style={{ color: "var(--accent)" }}
+                >
+                  runtime.worker(options)
+                </code>
+                <p
+                  className="text-xs mt-2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Create stateless workers with configurable concurrency.
+                </p>
               </div>
-              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
-                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>workflow.run(input, options)</code>
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Execute workflow with optional wait for completion.</p>
+              <div
+                className="p-4 rounded-lg"
+                style={{ background: "var(--bg-primary)" }}
+              >
+                <code
+                  className="text-sm font-mono"
+                  style={{ color: "var(--accent)" }}
+                >
+                  workflow.run(input, options)
+                </code>
+                <p
+                  className="text-xs mt-2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Execute workflow with optional wait for completion.
+                </p>
               </div>
             </div>
           </div>
 
           {/* Dual Mode */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <span className="text-lg">🏠</span> Embedded Mode
               </h3>
-              <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Your CockroachDB, your workers, full control.</p>
-              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
-                <pre className="p-4 text-xs font-mono overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>
-{`const runtime = new x404r({
+              <p
+                className="text-sm mb-4"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Your CockroachDB, your workers, full control.
+              </p>
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                <pre
+                  className="p-4 text-xs font-mono overflow-x-auto"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {`const runtime = new x404r({
   mode: 'embedded',
   connectionString: process.env.DATABASE_URL,
   ai: { provider: 'gemini', apiKey: '...' }
@@ -429,17 +620,34 @@ await worker.start();`}
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid rgba(59, 130, 246, 0.3)",
+              }}
+            >
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <span className="text-lg">☁️</span> Cloud Mode
               </h3>
-              <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Submit jobs via API, Lambda handles execution.</p>
-              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
-                <pre className="p-4 text-xs font-mono overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>
-{`const runtime = new x404r({
+              <p
+                className="text-sm mb-4"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Submit jobs via API, Lambda handles execution.
+              </p>
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                <pre
+                  className="p-4 text-xs font-mono overflow-x-auto"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {`const runtime = new x404r({
   mode: 'cloud',
   apiKey: 'x404r_live_...',
-  baseUrl: 'https://api.x404r.com'
+  baseUrl: 'https://www.npmjs.com/package/@shalwin04/x404r-sdk'
 });
 
 // Lambda workers execute automatically
@@ -454,21 +662,30 @@ const result = await runtime.submit('workflow', data);`}
             <a
               href="https://www.npmjs.com/package/@shalwin04/x404r-sdk"
               className="px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-default)",
+              }}
             >
               <span>📦</span> npm Package
             </a>
             <a
               href="https://github.com/shalwin04/x404-r"
               className="px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-default)",
+              }}
             >
               <span>🐙</span> GitHub Repo
             </a>
             <a
-              href="https://gb74j85no4.execute-api.us-east-1.amazonaws.com/prod/ready"
+              href="https://www.npmjs.com/package/@shalwin04/x404r-sdk"
               className="px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-default)",
+              }}
             >
               <span>🚀</span> Live API
             </a>
@@ -477,66 +694,164 @@ const result = await runtime.submit('workflow', data);`}
       </section>
 
       {/* Authentication Section */}
-      <section id="authentication" className="py-20 px-6" style={{ background: 'var(--bg-secondary)' }}>
+      <section
+        id="authentication"
+        className="py-20 px-6"
+        style={{ background: "var(--bg-secondary)" }}
+      >
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-              <svg className="w-4 h-4" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
+              style={{
+                background: "rgba(59, 130, 246, 0.1)",
+                border: "1px solid rgba(59, 130, 246, 0.2)",
+              }}
+            >
+              <svg
+                className="w-4 h-4"
+                style={{ color: "var(--accent)" }}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                />
               </svg>
-              <span className="text-xs font-medium" style={{ color: 'var(--accent)' }}>AUTHENTICATION</span>
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--accent)" }}
+              >
+                AUTHENTICATION
+              </span>
             </div>
-            <h2 className="text-3xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
+            <h2
+              className="text-3xl font-bold mb-4"
+              style={{ letterSpacing: "-0.02em" }}
+            >
               Secure API Key Authentication
             </h2>
-            <p className="max-w-2xl mx-auto" style={{ color: 'var(--text-muted)' }}>
-              x404-r uses API keys to authenticate requests. Each key is scoped to your organization
-              and provides secure access to your workflows and data.
+            <p
+              className="max-w-2xl mx-auto"
+              style={{ color: "var(--text-muted)" }}
+            >
+              x404-r uses API keys to authenticate requests. Each key is scoped
+              to your organization and provides secure access to your workflows
+              and data.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* How to get API key */}
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: 'var(--accent)', color: 'white' }}>1</span>
+                <span
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={{ background: "var(--accent)", color: "white" }}
+                >
+                  1
+                </span>
                 Get Your API Key
               </h3>
-              <ol className="space-y-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
+              <ol
+                className="space-y-3 text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 <li className="flex items-start gap-2">
-                  <span style={{ color: 'var(--accent)' }}>→</span>
-                  <span>Go to <Link href="/settings" className="underline" style={{ color: 'var(--accent)' }}>Settings</Link> in the dashboard</span>
+                  <span style={{ color: "var(--accent)" }}>→</span>
+                  <span>
+                    Go to{" "}
+                    <Link
+                      href="/settings"
+                      className="underline"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      Settings
+                    </Link>{" "}
+                    in the dashboard
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span style={{ color: 'var(--accent)' }}>→</span>
+                  <span style={{ color: "var(--accent)" }}>→</span>
                   <span>Click "Create Key" and give it a name</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span style={{ color: 'var(--accent)' }}>→</span>
-                  <span>Copy and securely store your key (shown only once)</span>
+                  <span style={{ color: "var(--accent)" }}>→</span>
+                  <span>
+                    Copy and securely store your key (shown only once)
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span style={{ color: 'var(--accent)' }}>→</span>
-                  <span>Add to your environment: <code className="px-1.5 py-0.5 rounded text-xs" style={{ background: 'var(--bg-elevated)' }}>X404R_API_KEY=af_...</code></span>
+                  <span style={{ color: "var(--accent)" }}>→</span>
+                  <span>
+                    Add to your environment:{" "}
+                    <code
+                      className="px-1.5 py-0.5 rounded text-xs"
+                      style={{ background: "var(--bg-elevated)" }}
+                    >
+                      X404R_API_KEY=af_...
+                    </code>
+                  </span>
                 </li>
               </ol>
             </div>
 
             {/* Using API key */}
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: 'var(--accent)', color: 'white' }}>2</span>
+                <span
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={{ background: "var(--accent)", color: "white" }}
+                >
+                  2
+                </span>
                 Use in Your Code
               </h3>
-              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
-                <div className="px-3 py-2 flex items-center justify-between border-b" style={{ borderColor: 'var(--border-subtle)' }}>
-                  <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>config.ts</span>
-                  <button onClick={copyAuthExample} className="text-xs" style={{ color: copiedKey ? 'var(--success)' : 'var(--text-muted)' }}>
-                    {copiedKey ? 'Copied!' : 'Copy'}
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                <div
+                  className="px-3 py-2 flex items-center justify-between border-b"
+                  style={{ borderColor: "var(--border-subtle)" }}
+                >
+                  <span
+                    className="text-xs font-mono"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    config.ts
+                  </span>
+                  <button
+                    onClick={copyAuthExample}
+                    className="text-xs"
+                    style={{
+                      color: copiedKey ? "var(--success)" : "var(--text-muted)",
+                    }}
+                  >
+                    {copiedKey ? "Copied!" : "Copy"}
                   </button>
                 </div>
-                <pre className="p-4 text-xs font-mono overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>
-{`const runtime = await new x404r({
+                <pre
+                  className="p-4 text-xs font-mono overflow-x-auto"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {`const runtime = await new x404r({
   connectionString: process.env.DATABASE_URL,
   apiKey: process.env.X404R_API_KEY,
 }).ready();`}
@@ -546,15 +861,41 @@ const result = await runtime.submit('workflow', data);`}
           </div>
 
           {/* API Key Security Note */}
-          <div className="mt-6 p-4 rounded-xl flex items-start gap-3" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-            <svg className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--warning)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <div
+            className="mt-6 p-4 rounded-xl flex items-start gap-3"
+            style={{
+              background: "rgba(245, 158, 11, 0.1)",
+              border: "1px solid rgba(245, 158, 11, 0.2)",
+            }}
+          >
+            <svg
+              className="w-5 h-5 mt-0.5 flex-shrink-0"
+              style={{ color: "var(--warning)" }}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
             <div>
-              <p className="font-medium text-sm" style={{ color: 'var(--warning)' }}>Keep your API key secure</p>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                Never commit API keys to version control. Use environment variables or a secrets manager.
-                Keys are hashed (SHA-256) and cannot be recovered if lost.
+              <p
+                className="font-medium text-sm"
+                style={{ color: "var(--warning)" }}
+              >
+                Keep your API key secure
+              </p>
+              <p
+                className="text-sm mt-1"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Never commit API keys to version control. Use environment
+                variables or a secrets manager. Keys are hashed (SHA-256) and
+                cannot be recovered if lost.
               </p>
             </div>
           </div>
@@ -565,100 +906,198 @@ const result = await runtime.submit('workflow', data);`}
       <section id="data-usage" className="py-20 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4" style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
-              <svg className="w-4 h-4" style={{ color: 'var(--success)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4"
+              style={{
+                background: "rgba(34, 197, 94, 0.1)",
+                border: "1px solid rgba(34, 197, 94, 0.2)",
+              }}
+            >
+              <svg
+                className="w-4 h-4"
+                style={{ color: "var(--success)" }}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                />
               </svg>
-              <span className="text-xs font-medium" style={{ color: 'var(--success)' }}>DATA POLICY</span>
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--success)" }}
+              >
+                DATA POLICY
+              </span>
             </div>
-            <h2 className="text-3xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
+            <h2
+              className="text-3xl font-bold mb-4"
+              style={{ letterSpacing: "-0.02em" }}
+            >
               Your Data, Your Control
             </h2>
-            <p className="max-w-2xl mx-auto" style={{ color: 'var(--text-muted)' }}>
-              We believe in transparency. Here's exactly what data we store and how we use it.
+            <p
+              className="max-w-2xl mx-auto"
+              style={{ color: "var(--text-muted)" }}
+            >
+              We believe in transparency. Here's exactly what data we store and
+              how we use it.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* What we store */}
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
-                <svg className="w-5 h-5" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(59, 130, 246, 0.1)" }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: "var(--accent)" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+                  />
                 </svg>
               </div>
               <h3 className="font-semibold mb-3">What We Store</h3>
-              <ul className="space-y-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <ul
+                className="space-y-2 text-sm"
+                style={{ color: "var(--text-muted)" }}
+              >
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--success)' }}>✓</span>
+                  <span style={{ color: "var(--success)" }}>✓</span>
                   Workflow state & checkpoints
                 </li>
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--success)' }}>✓</span>
+                  <span style={{ color: "var(--success)" }}>✓</span>
                   Task inputs & outputs
                 </li>
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--success)' }}>✓</span>
+                  <span style={{ color: "var(--success)" }}>✓</span>
                   Token usage metrics
                 </li>
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--success)' }}>✓</span>
+                  <span style={{ color: "var(--success)" }}>✓</span>
                   Error logs for debugging
                 </li>
               </ul>
             </div>
 
             {/* How we use it */}
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(34, 197, 94, 0.1)' }}>
-                <svg className="w-5 h-5" style={{ color: 'var(--success)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(34, 197, 94, 0.1)" }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: "var(--success)" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
               </div>
               <h3 className="font-semibold mb-3">How We Use It</h3>
-              <ul className="space-y-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <ul
+                className="space-y-2 text-sm"
+                style={{ color: "var(--text-muted)" }}
+              >
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--accent)' }}>→</span>
+                  <span style={{ color: "var(--accent)" }}>→</span>
                   Resume workflows after crashes
                 </li>
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--accent)' }}>→</span>
+                  <span style={{ color: "var(--accent)" }}>→</span>
                   Time-travel debugging
                 </li>
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--accent)' }}>→</span>
+                  <span style={{ color: "var(--accent)" }}>→</span>
                   Usage billing & analytics
                 </li>
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--accent)' }}>→</span>
+                  <span style={{ color: "var(--accent)" }}>→</span>
                   Service improvement
                 </li>
               </ul>
             </div>
 
             {/* What we DON'T do */}
-            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
-                <svg className="w-5 h-5" style={{ color: 'var(--error)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            <div
+              className="p-6 rounded-2xl"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(239, 68, 68, 0.1)" }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: "var(--error)" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                  />
                 </svg>
               </div>
               <h3 className="font-semibold mb-3">What We Don't Do</h3>
-              <ul className="space-y-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <ul
+                className="space-y-2 text-sm"
+                style={{ color: "var(--text-muted)" }}
+              >
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--error)' }}>✗</span>
+                  <span style={{ color: "var(--error)" }}>✗</span>
                   Sell your data to third parties
                 </li>
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--error)' }}>✗</span>
+                  <span style={{ color: "var(--error)" }}>✗</span>
                   Train AI models on your data
                 </li>
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--error)' }}>✗</span>
+                  <span style={{ color: "var(--error)" }}>✗</span>
                   Share data across tenants
                 </li>
                 <li className="flex items-center gap-2">
-                  <span style={{ color: 'var(--error)' }}>✗</span>
+                  <span style={{ color: "var(--error)" }}>✗</span>
                   Retain data after deletion
                 </li>
               </ul>
@@ -666,19 +1105,43 @@ const result = await runtime.submit('workflow', data);`}
           </div>
 
           {/* Tenant Isolation */}
-          <div className="mt-8 p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+          <div
+            className="mt-8 p-6 rounded-2xl"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(139, 92, 246, 0.1)' }}>
-                <svg className="w-6 h-6" style={{ color: '#8b5cf6' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(139, 92, 246, 0.1)" }}
+              >
+                <svg
+                  className="w-6 h-6"
+                  style={{ color: "#8b5cf6" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold mb-2">Complete Tenant Isolation</h3>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Each organization's data is completely isolated using CockroachDB's row-level security.
-                  Your workflows, checkpoints, and AI outputs are never accessible by other tenants.
-                  All data is scoped by your unique tenant ID and enforced at the database level.
+                <h3 className="font-semibold mb-2">
+                  Complete Tenant Isolation
+                </h3>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  Each organization's data is completely isolated using
+                  CockroachDB's row-level security. Your workflows, checkpoints,
+                  and AI outputs are never accessible by other tenants. All data
+                  is scoped by your unique tenant ID and enforced at the
+                  database level.
                 </p>
               </div>
             </div>
@@ -687,91 +1150,235 @@ const result = await runtime.submit('workflow', data);`}
       </section>
 
       {/* Features Grid */}
-      <section id="features" className="py-20 px-6" style={{ background: 'var(--bg-secondary)' }}>
+      <section
+        id="features"
+        className="py-20 px-6"
+        style={{ background: "var(--bg-secondary)" }}
+      >
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4" style={{ letterSpacing: '-0.02em' }}>
+          <h2
+            className="text-3xl font-bold text-center mb-4"
+            style={{ letterSpacing: "-0.02em" }}
+          >
             Everything you need for crash-proof agents
           </h2>
-          <p className="text-center mb-12 max-w-2xl mx-auto" style={{ color: 'var(--text-muted)' }}>
-            Built on CockroachDB's distributed architecture. Deploy with AWS Lambda.
+          <p
+            className="text-center mb-12 max-w-2xl mx-auto"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Built on CockroachDB's distributed architecture. Deploy with AWS
+            Lambda.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Feature 1 */}
-            <div className="p-6 rounded-2xl card-interactive" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
-                <svg className="w-5 h-5" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            <div
+              className="p-6 rounded-2xl card-interactive"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(59, 130, 246, 0.1)" }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: "var(--accent)" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Crash-Proof Checkpoints</h3>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Save progress to CockroachDB at any point. Workers can crash, restart, or scale — agents resume exactly where they left off.
+              <h3 className="text-lg font-semibold mb-2">
+                Crash-Proof Checkpoints
+              </h3>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Save progress to CockroachDB at any point. Workers can crash,
+                restart, or scale — agents resume exactly where they left off.
               </p>
             </div>
 
             {/* Feature 2 */}
-            <div className="p-6 rounded-2xl card-interactive" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(34, 197, 94, 0.1)' }}>
-                <svg className="w-5 h-5" style={{ color: 'var(--success)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div
+              className="p-6 rounded-2xl card-interactive"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(34, 197, 94, 0.1)" }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: "var(--success)" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Time Travel Debugging</h3>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Replay any workflow from any checkpoint. Debug failures by rewinding time. Test different inputs without re-running entire workflows.
+              <h3 className="text-lg font-semibold mb-2">
+                Time Travel Debugging
+              </h3>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Replay any workflow from any checkpoint. Debug failures by
+                rewinding time. Test different inputs without re-running entire
+                workflows.
               </p>
             </div>
 
             {/* Feature 3 */}
-            <div className="p-6 rounded-2xl card-interactive" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(245, 158, 11, 0.1)' }}>
-                <svg className="w-5 h-5" style={{ color: 'var(--warning)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div
+              className="p-6 rounded-2xl card-interactive"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(245, 158, 11, 0.1)" }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: "var(--warning)" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
               <h3 className="text-lg font-semibold mb-2">Cost Transparency</h3>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Track exactly what you're spending on AI. See per-task token usage, cost breakdowns, and how much crash recovery saves you.
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Track exactly what you're spending on AI. See per-task token
+                usage, cost breakdowns, and how much crash recovery saves you.
               </p>
             </div>
 
             {/* Feature 4 */}
-            <div className="p-6 rounded-2xl card-interactive" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
-                <svg className="w-5 h-5" style={{ color: 'var(--error)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <div
+              className="p-6 rounded-2xl card-interactive"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(239, 68, 68, 0.1)" }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: "var(--error)" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
                 </svg>
               </div>
               <h3 className="text-lg font-semibold mb-2">Chaos Engineering</h3>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Built-in failure injection for testing. Simulate crashes, timeouts, OOM, and rate limits. Verify your agents handle failures gracefully.
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Built-in failure injection for testing. Simulate crashes,
+                timeouts, OOM, and rate limits. Verify your agents handle
+                failures gracefully.
               </p>
             </div>
 
             {/* Feature 5 */}
-            <div className="p-6 rounded-2xl card-interactive" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(139, 92, 246, 0.1)' }}>
-                <svg className="w-5 h-5" style={{ color: '#8b5cf6' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            <div
+              className="p-6 rounded-2xl card-interactive"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(139, 92, 246, 0.1)" }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: "#8b5cf6" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
                 </svg>
               </div>
               <h3 className="text-lg font-semibold mb-2">Multi-Tenant SaaS</h3>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Built-in tenant isolation, API key auth, usage tracking, and priority scheduling. Enterprise customers get processed first.
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Built-in tenant isolation, API key auth, usage tracking, and
+                priority scheduling. Enterprise customers get processed first.
               </p>
             </div>
 
             {/* Feature 6 */}
-            <div className="p-6 rounded-2xl card-interactive" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
-                <svg className="w-5 h-5" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            <div
+              className="p-6 rounded-2xl card-interactive"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ background: "rgba(59, 130, 246, 0.1)" }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: "var(--accent)" }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
                 </svg>
               </div>
               <h3 className="text-lg font-semibold mb-2">AWS Bedrock Ready</h3>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Use Claude, Titan, or Llama via AWS Bedrock. Also supports Gemini, OpenAI, and Anthropic directly. One config to switch providers.
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Use Claude, Titan, or Llama via AWS Bedrock. Also supports
+                Gemini, OpenAI, and Anthropic directly. One config to switch
+                providers.
               </p>
             </div>
           </div>
@@ -781,64 +1388,116 @@ const result = await runtime.submit('workflow', data);`}
       {/* Tech Stack */}
       <section className="py-20 px-6">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-12" style={{ letterSpacing: '-0.02em' }}>
+          <h2
+            className="text-2xl font-bold text-center mb-12"
+            style={{ letterSpacing: "-0.02em" }}
+          >
             Built on battle-tested infrastructure
           </h2>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: 'var(--bg-elevated)' }}>
-                <span className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>CR</span>
+              <div
+                className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                <span
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--accent)" }}
+                >
+                  CR
+                </span>
               </div>
               <h3 className="font-semibold mb-1">CockroachDB</h3>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Distributed SQL</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Distributed SQL
+              </p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: 'var(--bg-elevated)' }}>
-                <span className="text-2xl font-bold" style={{ color: '#ff9900' }}>λ</span>
+              <div
+                className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                <span
+                  className="text-2xl font-bold"
+                  style={{ color: "#ff9900" }}
+                >
+                  λ
+                </span>
               </div>
               <h3 className="font-semibold mb-1">AWS Lambda</h3>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Serverless Workers</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Serverless Workers
+              </p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: 'var(--bg-elevated)' }}>
-                <span className="text-2xl font-bold" style={{ color: '#00d4aa' }}>TS</span>
+              <div
+                className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                <span
+                  className="text-2xl font-bold"
+                  style={{ color: "#00d4aa" }}
+                >
+                  TS
+                </span>
               </div>
               <h3 className="font-semibold mb-1">TypeScript</h3>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Type-safe SDK</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Type-safe SDK
+              </p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: 'var(--bg-elevated)' }}>
-                <span className="text-2xl font-bold" style={{ color: '#61dafb' }}>RF</span>
+              <div
+                className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                style={{ background: "var(--bg-elevated)" }}
+              >
+                <span
+                  className="text-2xl font-bold"
+                  style={{ color: "#61dafb" }}
+                >
+                  RF
+                </span>
               </div>
               <h3 className="font-semibold mb-1">React Flow</h3>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>DAG Visualization</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                DAG Visualization
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6" style={{ background: 'var(--bg-secondary)' }}>
+      <section
+        className="py-20 px-6"
+        style={{ background: "var(--bg-secondary)" }}
+      >
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
+          <h2
+            className="text-3xl font-bold mb-4"
+            style={{ letterSpacing: "-0.02em" }}
+          >
             Ready to build crash-proof agents?
           </h2>
-          <p className="mb-8" style={{ color: 'var(--text-muted)' }}>
+          <p className="mb-8" style={{ color: "var(--text-muted)" }}>
             Try the live demo or explore the SDK documentation.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/dashboard"
               className="px-8 py-3 rounded-lg text-base font-medium"
-              style={{ background: 'var(--accent)', color: 'white' }}
+              style={{ background: "var(--accent)", color: "white" }}
             >
               Open Dashboard
             </Link>
             <Link
               href="https://github.com/shalwin04/x404-r"
               className="px-8 py-3 rounded-lg text-base font-medium"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-default)",
+              }}
             >
               View on GitHub
             </Link>
@@ -847,16 +1506,33 @@ const result = await runtime.submit('workflow', data);`}
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-6 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+      <footer
+        className="py-8 px-6 border-t"
+        style={{ borderColor: "var(--border-subtle)" }}
+      >
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="font-semibold">x404-r</span>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Context never lost</span>
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+              Context never lost
+            </span>
           </div>
-          <div className="flex items-center gap-6 text-xs" style={{ color: 'var(--text-muted)' }}>
-            <a href="#data-usage" className="hover:underline">Data Policy</a>
-            <a href="#authentication" className="hover:underline">API Docs</a>
-            <a href="https://cockroachdb-ai.devpost.com/" className="hover:underline">Hackathon</a>
+          <div
+            className="flex items-center gap-6 text-xs"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <a href="#data-usage" className="hover:underline">
+              Data Policy
+            </a>
+            <a href="#authentication" className="hover:underline">
+              API Docs
+            </a>
+            <a
+              href="https://cockroachdb-ai.devpost.com/"
+              className="hover:underline"
+            >
+              Hackathon
+            </a>
           </div>
         </div>
       </footer>
