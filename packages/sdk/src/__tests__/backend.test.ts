@@ -2,10 +2,25 @@
  * Backend abstraction tests
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { x404r } from '../client.js';
 import { CloudBackend } from '../backend/cloud.js';
 import { isEmbeddedConfig, isCloudConfig } from '../types.js';
+
+// Store clients for cleanup
+const clients: x404r[] = [];
+
+afterEach(async () => {
+  // Clean up all clients to prevent unhandled rejections
+  for (const client of clients) {
+    try {
+      await client.close();
+    } catch {
+      // Ignore close errors
+    }
+  }
+  clients.length = 0;
+});
 
 describe('Dual Mode Configuration', () => {
   describe('Type Guards', () => {
@@ -43,6 +58,7 @@ describe('Dual Mode Configuration', () => {
         apiKey: 'x404r_test_key',
         baseUrl: 'http://localhost:3001',
       });
+      clients.push(runtime);
 
       expect(runtime.currentMode).toBe('cloud');
       expect(runtime.isCloud).toBe(true);
@@ -54,6 +70,7 @@ describe('Dual Mode Configuration', () => {
         mode: 'cloud',
         apiKey: 'x404r_test_key',
       });
+      clients.push(runtime);
 
       expect(() => runtime.worker()).toThrow('Workers are not available in cloud mode');
     });
@@ -63,6 +80,7 @@ describe('Dual Mode Configuration', () => {
         mode: 'cloud',
         apiKey: 'x404r_test_key',
       });
+      clients.push(runtime);
 
       expect(() => runtime.db).toThrow('Direct database access not available in cloud mode');
     });
@@ -100,6 +118,7 @@ describe('Dual Mode Configuration', () => {
       const runtime = new x404r({
         connectionString: 'postgresql://localhost:26257/test',
       });
+      clients.push(runtime);
 
       expect(runtime.currentMode).toBe('embedded');
       expect(runtime.isEmbedded).toBe(true);

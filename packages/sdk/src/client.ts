@@ -77,7 +77,8 @@ export class AgentDB {
       });
       this.tenantId = ''; // Managed by API
       this.aiProvider = new MockAIProvider(); // AI calls handled by Lambda
-      this.initPromise = this.backend.ready();
+      // Don't call ready() automatically - let user call .ready() explicitly
+      this.initPromise = Promise.resolve();
     } else {
       // Embedded mode - direct DB connection
       const embeddedConfig = config as EmbeddedConfig;

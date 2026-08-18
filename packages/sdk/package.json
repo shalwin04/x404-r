@@ -1,5 +1,5 @@
 {
-  "name": "@x404-r/sdk",
+  "name": "@shalwin04/x404r-sdk",
   "version": "0.1.0",
   "description": "The runtime where context is never lost - crash-proof AI agents on CockroachDB",
   "main": "dist/index.js",
@@ -58,11 +58,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/x404-r/sdk.git"
+    "url": "https://github.com/shalwin04/x404-r.git"
   },
-  "homepage": "https://x404-r.dev",
+  "homepage": "https://github.com/shalwin04/x404-r",
   "bugs": {
-    "url": "https://github.com/x404-r/sdk/issues"
+    "url": "https://github.com/shalwin04/x404-r/issues"
   },
   "engines": {
     "node": ">=18.0.0"
