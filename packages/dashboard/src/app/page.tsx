@@ -8,7 +8,7 @@ export default function LandingPage() {
   const [copiedKey, setCopiedKey] = useState(false);
 
   const copyInstall = () => {
-    navigator.clipboard.writeText('npm install @x404-r/sdk');
+    navigator.clipboard.writeText('npm install @shalwin04/x404r-sdk');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -34,10 +34,10 @@ export default function LandingPage() {
             </span>
           </div>
           <div className="flex items-center gap-6">
+            <a href="#comparison" className="text-sm" style={{ color: 'var(--text-muted)' }}>Results</a>
+            <a href="#sdk" className="text-sm" style={{ color: 'var(--text-muted)' }}>SDK</a>
             <a href="#features" className="text-sm" style={{ color: 'var(--text-muted)' }}>Features</a>
-            <a href="#authentication" className="text-sm" style={{ color: 'var(--text-muted)' }}>Auth</a>
             <Link href="/monitor" className="text-sm" style={{ color: 'var(--text-muted)' }}>Monitor</Link>
-            <Link href="/dashboard" className="text-sm" style={{ color: 'var(--text-muted)' }}>Dashboard</Link>
             <Link
               href="/dashboard"
               className="text-sm px-4 py-2 rounded-lg font-medium"
@@ -82,7 +82,7 @@ export default function LandingPage() {
               style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
             >
               <span style={{ color: 'var(--text-muted)' }}>$</span>
-              <span>npm install @x404-r/sdk</span>
+              <span>npm install @shalwin04/x404r-sdk</span>
               <span style={{ color: copied ? 'var(--success)' : 'var(--text-muted)' }}>
                 {copied ? '✓' : '⎘'}
               </span>
@@ -102,23 +102,301 @@ export default function LandingPage() {
               <span className="ml-3 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>crash-proof-agent.ts</span>
             </div>
             <pre className="p-6 text-sm font-mono overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>
-              <code>{`import { durable } from '@x404-r/sdk';
+              <code>{`import { x404r } from '@shalwin04/x404r-sdk';
 
-// One line to make any function crash-proof
-const result = await durable('process-documents', async (ctx) => {
-  for (const doc of documents) {
-    await processDocument(doc);
+// Initialize the crash-proof runtime
+const runtime = await new x404r({
+  connectionString: process.env.DATABASE_URL,  // CockroachDB
+  ai: { provider: 'gemini', apiKey: process.env.GEMINI_API_KEY }
+}).ready();
 
-    // Checkpoint - survives any crash!
-    await ctx.checkpoint('processed-' + doc.id);
+// Define a workflow with checkpoints
+const workflow = runtime.workflow('analyze-code', {
+  steps: [{
+    name: 'process',
+    handler: async (ctx) => {
+      // Resume from checkpoint if we crashed
+      let step = ctx.state.step || 0;
 
-    // Worker dies here? No problem.
-    // Next worker resumes from checkpoint.
-  }
+      for (let i = step; i < items.length; i++) {
+        const result = await ctx.ai.generate(\`Analyze: \${items[i]}\`);
 
-  return { success: true, count: documents.length };
-});`}</code>
+        // THE MAGIC LINE - state saved to CockroachDB
+        await ctx.checkpoint({ step: i + 1, results: [...] });
+        // Worker dies here? No problem. Next worker resumes.
+      }
+      return { done: true };
+    }
+  }]
+});
+
+// Run with crash recovery
+const result = await workflow.run({ items }, { wait: true });`}</code>
             </pre>
+          </div>
+        </div>
+      </section>
+
+      {/* Real Comparison Results */}
+      <section id="comparison" className="py-20 px-6" style={{ background: 'var(--bg-secondary)' }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4" style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+              <span className="text-xs font-medium" style={{ color: 'var(--success)' }}>REAL BENCHMARK</span>
+            </div>
+            <h2 className="text-3xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
+              Live Comparison Results
+            </h2>
+            <p className="max-w-2xl mx-auto" style={{ color: 'var(--text-muted)' }}>
+              Same 5-step AI task. Same crash at step 3. Real Gemini API calls. See the difference.
+            </p>
+          </div>
+
+          {/* Comparison Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* x404-r SDK Results */}
+            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-primary)', border: '2px solid var(--success)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-2xl">✅</span>
+                <div>
+                  <h3 className="text-xl font-semibold">x404-r SDK</h3>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>With checkpoints</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total AI Calls</span>
+                  <span className="font-bold text-lg" style={{ color: 'var(--success)' }}>5</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Wasted AI Calls</span>
+                  <span className="font-bold text-lg" style={{ color: 'var(--success)' }}>0</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Tokens</span>
+                  <span className="font-bold" style={{ color: 'var(--success)' }}>12,609</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Wasted Tokens</span>
+                  <span className="font-bold" style={{ color: 'var(--success)' }}>250</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Cost</span>
+                  <span className="font-bold" style={{ color: 'var(--success)' }}>$0.00352</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Time</span>
+                  <span className="font-bold" style={{ color: 'var(--success)' }}>90.2s</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Vanilla Results */}
+            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-primary)', border: '2px solid var(--error)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-2xl">❌</span>
+                <div>
+                  <h3 className="text-xl font-semibold">Vanilla Agent</h3>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No checkpoints</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total AI Calls</span>
+                  <span className="font-bold text-lg" style={{ color: 'var(--error)' }}>7</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Wasted AI Calls</span>
+                  <span className="font-bold text-lg" style={{ color: 'var(--error)' }}>2</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Tokens</span>
+                  <span className="font-bold" style={{ color: 'var(--error)' }}>19,469</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Wasted Tokens</span>
+                  <span className="font-bold" style={{ color: 'var(--error)' }}>3,889</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Cost</span>
+                  <span className="font-bold" style={{ color: 'var(--error)' }}>$0.00558</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-lg" style={{ background: 'var(--bg-elevated)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Time</span>
+                  <span className="font-bold" style={{ color: 'var(--error)' }}>184.9s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Key Difference */}
+          <div className="p-6 rounded-2xl text-center" style={{ background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05))', border: '2px solid var(--success)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--success)' }}>KEY DIFFERENCE</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <div className="text-4xl font-bold" style={{ color: 'var(--success)' }}>2 calls</div>
+                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>AI Calls Saved (29% fewer)</div>
+              </div>
+              <div>
+                <div className="text-4xl font-bold" style={{ color: 'var(--success)' }}>3,639</div>
+                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Tokens Not Wasted</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Takeaway */}
+          <div className="mt-8 p-6 rounded-2xl" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)' }}>
+            <h3 className="text-center font-semibold mb-4">THE TAKEAWAY</h3>
+            <div className="text-center space-y-2">
+              <p><span style={{ color: 'var(--error)' }}>❌ Vanilla:</span> Wasted 2 AI calls, must redo ALL 5 steps</p>
+              <p><span style={{ color: 'var(--success)' }}>✅ x404-r:</span> Wasted 0 AI calls, resumed from checkpoint</p>
+              <p className="mt-4 font-semibold" style={{ color: 'var(--success)' }}>x404-r SDK ensures context is NEVER lost.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SDK Details Section */}
+      <section id="sdk" className="py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+              <span className="text-xs font-medium" style={{ color: 'var(--accent)' }}>SDK</span>
+            </div>
+            <h2 className="text-3xl font-bold mb-4" style={{ letterSpacing: '-0.02em' }}>
+              @shalwin04/x404r-sdk
+            </h2>
+            <p className="max-w-2xl mx-auto" style={{ color: 'var(--text-muted)' }}>
+              Published on npm. 78 tests passing. TypeScript-first.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Install */}
+            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <span className="text-lg">📦</span> Installation
+              </h3>
+              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
+                <pre className="p-4 text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
+{`npm install @shalwin04/x404r-sdk`}
+                </pre>
+              </div>
+            </div>
+
+            {/* Initialize */}
+            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <span className="text-lg">🔧</span> Initialize
+              </h3>
+              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
+                <pre className="p-4 text-sm font-mono overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>
+{`const runtime = await new x404r({
+  connectionString: process.env.DATABASE_URL,
+  ai: { provider: 'gemini', apiKey: '...' }
+}).ready();`}
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          {/* Core APIs */}
+          <div className="p-6 rounded-2xl mb-8" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <h3 className="font-semibold mb-6 flex items-center gap-2">
+              <span className="text-lg">🛠️</span> Core APIs
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
+                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>ctx.checkpoint(state)</code>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Save state atomically to CockroachDB. Survives any crash.</p>
+              </div>
+              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
+                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>ctx.state</code>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Access last checkpoint. Resume from where you left off.</p>
+              </div>
+              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
+                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>ctx.ai.generate(prompt)</code>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Call AI with automatic token tracking and cost calculation.</p>
+              </div>
+              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
+                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>runtime.workflow(name, config)</code>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Define multi-step workflows with dependencies (DAG).</p>
+              </div>
+              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
+                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>runtime.worker(options)</code>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Create stateless workers with configurable concurrency.</p>
+              </div>
+              <div className="p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
+                <code className="text-sm font-mono" style={{ color: 'var(--accent)' }}>workflow.run(input, options)</code>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Execute workflow with optional wait for completion.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Dual Mode */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <span className="text-lg">🏠</span> Embedded Mode
+              </h3>
+              <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Your CockroachDB, your workers, full control.</p>
+              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
+                <pre className="p-4 text-xs font-mono overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>
+{`const runtime = new x404r({
+  mode: 'embedded',
+  connectionString: process.env.DATABASE_URL,
+  ai: { provider: 'gemini', apiKey: '...' }
+});
+
+const worker = runtime.worker({ concurrency: 5 });
+await worker.start();`}
+                </pre>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl" style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <span className="text-lg">☁️</span> Cloud Mode
+              </h3>
+              <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>Submit jobs via API, Lambda handles execution.</p>
+              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-elevated)' }}>
+                <pre className="p-4 text-xs font-mono overflow-x-auto" style={{ color: 'var(--text-secondary)' }}>
+{`const runtime = new x404r({
+  mode: 'cloud',
+  apiKey: 'x404r_live_...',
+  baseUrl: 'https://api.x404r.com'
+});
+
+// Lambda workers execute automatically
+const result = await runtime.submit('workflow', data);`}
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          {/* Links */}
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <a
+              href="https://www.npmjs.com/package/@shalwin04/x404r-sdk"
+              className="px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+            >
+              <span>📦</span> npm Package
+            </a>
+            <a
+              href="https://github.com/shalwin04/x404-r"
+              className="px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+            >
+              <span>🐙</span> GitHub Repo
+            </a>
+            <a
+              href="https://gb74j85no4.execute-api.us-east-1.amazonaws.com/prod/ready"
+              className="px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
+            >
+              <span>🚀</span> Live API
+            </a>
           </div>
         </div>
       </section>
@@ -483,7 +761,7 @@ const result = await durable('process-documents', async (ctx) => {
               Open Dashboard
             </Link>
             <Link
-              href="https://github.com/x404-r/sdk"
+              href="https://github.com/shalwin04/x404-r"
               className="px-8 py-3 rounded-lg text-base font-medium"
               style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}
             >
