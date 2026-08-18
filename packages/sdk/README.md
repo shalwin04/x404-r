@@ -1,4 +1,4 @@
-# @x404-r/sdk
+# @shalwin04/x404r-sdk
 
 **The runtime where context is never lost.**
 
@@ -7,7 +7,7 @@ Database-native infrastructure for crash-proof AI agents. Built on CockroachDB f
 ## Installation
 
 ```bash
-npm install @x404-r/sdk
+npm install @shalwin04/x404r-sdk
 ```
 
 ## Why x404-r?
@@ -33,7 +33,7 @@ x404-r fixes this. State lives in CockroachDB, not memory. Workers are stateless
 Run everything on your infrastructure. Direct CockroachDB connection, local workers.
 
 ```typescript
-import { x404r } from '@x404-r/sdk';
+import { x404r } from '@shalwin04/x404r-sdk';
 
 const runtime = await new x404r({
   mode: 'embedded',  // optional, this is the default
@@ -57,7 +57,7 @@ await worker.start();
 Zero infrastructure. Just submit jobs, Lambda workers execute them.
 
 ```typescript
-import { x404r } from '@x404-r/sdk';
+import { x404r } from '@shalwin04/x404r-sdk';
 
 const runtime = new x404r({
   mode: 'cloud',
@@ -81,7 +81,7 @@ await runtime.replay(job.workflowId, checkpoints[0].id);
 ## Quick Start (Embedded Mode)
 
 ```typescript
-import { x404r } from '@x404-r/sdk';
+import { x404r } from '@shalwin04/x404r-sdk';
 
 // Initialize the runtime
 const runtime = await new x404r({
@@ -337,7 +337,7 @@ GEMINI_API_KEY=your-gemini-key
 x404-r tracks the value it provides. See exactly what crashes cost you - and what you saved.
 
 ```typescript
-import { MetricsCollector } from '@x404-r/sdk/metrics';
+import { MetricsCollector } from '@shalwin04/x404r-sdk/metrics';
 
 const metrics = new MetricsCollector();
 

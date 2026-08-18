@@ -31,7 +31,7 @@ Context? Always found. Progress? Never lost. Agents? Crash-proof.
 
 | Component               | Status      | Description                                           |
 | ----------------------- | ----------- | ----------------------------------------------------- |
-| **Core SDK**            | ✅ Complete | `@x404-r/sdk` - TypeScript SDK for crash-proof agents |
+| **Core SDK**            | ✅ Complete | `@shalwin04/x404r-sdk` - TypeScript SDK for crash-proof agents |
 | **One-Line API**        | ✅ Complete | `durable()` function for instant crash-proofing       |
 | **Database Schema**     | ✅ Complete | Multi-tenant schema with checkpoints, memory vectors  |
 | **Multi-Tenancy**       | ✅ Complete | Tenant isolation, API key auth, usage tracking        |
@@ -65,7 +65,7 @@ Context? Always found. Progress? Never lost. Agents? Crash-proof.
 │         │                    │                    │             │
 │         ▼                    ▼                    ▼             │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │                      @x404-r/sdk                         │   │
+│  │                      @shalwin04/x404r-sdk                         │   │
 │  │  ┌─────────┐  ┌──────────┐  ┌────────┐  ┌───────────┐  │   │
 │  │  │ x404r   │  │ Workflow │  │ Worker │  │ AIProvider│  │   │
 │  │  │ Client  │  │ Builder  │  │        │  │           │  │   │
@@ -99,13 +99,13 @@ Context? Always found. Progress? Never lost. Agents? Crash-proof.
 ### 1. Install the SDK
 
 ```bash
-npm install @x404-r/sdk
+npm install @shalwin04/x404r-sdk
 ```
 
 ### 2. Create a Crash-Proof Agent
 
 ```typescript
-import { x404r } from "@x404-r/sdk";
+import { x404r } from "@shalwin04/x404r-sdk";
 
 // Initialize the runtime
 const runtime = await new x404r({
@@ -252,7 +252,7 @@ ctx.state._memories = [
 ```
 x404-r/
 ├── packages/
-│   ├── sdk/                 # @x404-r/sdk - Core SDK
+│   ├── sdk/                 # @shalwin04/x404r-sdk - Core SDK
 │   │   ├── src/
 │   │   │   ├── client.ts    # Main x404r client
 │   │   │   ├── workflow.ts  # Workflow builder with DAG validation
@@ -309,15 +309,67 @@ npx tsx examples/code-review-agent.ts
 
 ## AWS Deployment
 
-```bash
-# Set secrets
-aws secretsmanager create-secret --name x404-r/database-url --secret-string "your-db-url"
-aws secretsmanager create-secret --name x404-r/gemini-api-key --secret-string "your-api-key"
+### Option 1: Docker Compose (Quickest)
 
-# Deploy with CDK
-cd infrastructure
-npm run deploy
+```bash
+# Clone and setup
+git clone https://github.com/shalwin04/x404-r.git
+cd x404-r
+cp .env.example .env
+# Edit .env with your DATABASE_URL and GEMINI_API_KEY
+
+# Deploy
+docker-compose up -d
+
+# Services:
+# - Dashboard: http://localhost:3000
+# - API:       http://localhost:3001
+# - CockroachDB: http://localhost:8080
 ```
+
+### Option 2: AWS Lambda + CDK
+
+```bash
+# Prerequisites
+npm install -g aws-cdk
+aws configure  # Setup AWS credentials
+
+# Store secrets in AWS Secrets Manager
+aws secretsmanager create-secret --name x404-r/database-url \
+  --secret-string "postgresql://user:pass@your-cockroachdb:26257/x404r"
+
+aws secretsmanager create-secret --name x404-r/gemini-api-key \
+  --secret-string "your-gemini-api-key"
+
+# Deploy Lambda + API Gateway
+cd infrastructure
+npm install
+npx cdk bootstrap  # First time only
+npx cdk deploy
+
+# Output will show:
+# - API Gateway URL: https://xxx.execute-api.region.amazonaws.com/prod
+```
+
+### Option 3: Vercel (Dashboard) + AWS Lambda (API)
+
+```bash
+# Deploy Dashboard to Vercel
+cd packages/dashboard
+npx vercel deploy --prod
+
+# Deploy API to AWS Lambda (see Option 2)
+cd ../..
+cd infrastructure
+npx cdk deploy
+```
+
+### CockroachDB Cloud Setup
+
+1. Go to https://cockroachlabs.cloud
+2. Create a free cluster
+3. Get connection string from "Connect" tab
+4. Update `DATABASE_URL` in your `.env` or AWS Secrets Manager
 
 ## Why "x404-r"?
 
@@ -338,7 +390,7 @@ When your agent runs for hours and a worker crashes, traditional systems return 
 The simplest way to make any function crash-proof:
 
 ```typescript
-import { durable } from '@x404-r/sdk';
+import { durable } from '@shalwin04/x404r-sdk';
 
 const result = await durable('my-task', async (ctx) => {
   await ctx.checkpoint('step-1');  // Survives crashes
