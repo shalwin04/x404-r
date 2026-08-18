@@ -1,11 +1,8 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
-  turbopack: {
-    root: path.join(__dirname, "../.."),
-  },
+  // Remove standalone for Vercel - it handles deployment itself
+  // output: "standalone" is only for Docker/self-hosting
 };
 
 export default nextConfig;
