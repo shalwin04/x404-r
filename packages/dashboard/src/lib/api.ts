@@ -382,6 +382,191 @@ export async function triggerReclaim(): Promise<void> {
   if (!res.ok) throw new ApiError('Failed to trigger reclaim', res.status);
 }
 
+// ============ Metrics APIs ============
+
+export interface MetricsSummary {
+  execution: {
+    tasksTotal: number;
+    tasksCompleted: number;
+    tasksFailed: number;
+    tasksPending: number;
+    tasksRunning: number;
+    successRate: number;
+    throughput: number;
+    queueDepth: number;
+    activeWorkers: number;
+  };
+  cost: {
+    totalCostUsd: number;
+    costPerTask: number;
+    tokensInput: number;
+    tokensOutput: number;
+    tokensTotal: number;
+    savingsFromCheckpoints: number;
+    projectedMonthlyCost: number;
+  };
+  performance: {
+    latencyP50Ms: number;
+    latencyP95Ms: number;
+    latencyP99Ms: number;
+    latencyAvgMs: number;
+    throughputPerMinute: number;
+    checkpointLatencyMs: number;
+    aiLatencyMs: number;
+  };
+  reliability: {
+    uptimePercent: number;
+    mtbfMinutes: number;
+    mttrSeconds: number;
+    crashRecoveries: number;
+    checkpointHitRate: number;
+  };
+  ai: {
+    totalGenerations: number;
+    modelBreakdown: Record<string, number>;
+    avgTokensPerGeneration: number;
+    contextUtilization: number;
+  };
+}
+
+export interface MetricsResponse {
+  metrics: MetricsSummary;
+}
+
+export async function getMetrics(): Promise<MetricsResponse> {
+  const res = await fetch(`${API_BASE}/metrics`, {
+    headers: getHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export interface MetricsHistoryEntry {
+  hour?: Date;
+  timestamp?: Date;
+  metrics?: MetricsSummary;
+  tasksCompleted?: number;
+  tasksFailed?: number;
+  successRate?: number;
+  totalCost?: number;
+  latencyP50?: number;
+  latencyP95?: number;
+  aiGenerations?: number;
+}
+
+export interface MetricsHistoryResponse {
+  granularity: 'hourly' | 'raw';
+  hours: number;
+  data: MetricsHistoryEntry[];
+}
+
+export async function getMetricsHistory(
+  hours = 24,
+  granularity: 'hourly' | 'raw' = 'hourly'
+): Promise<MetricsHistoryResponse> {
+  const res = await fetch(
+    `${API_BASE}/metrics/history?hours=${hours}&granularity=${granularity}`,
+    { headers: getHeaders() }
+  );
+  return handleResponse(res);
+}
+
+// ============ Plan Generation APIs ============
+
+export interface GeneratedTask {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  dependsOn: string[];
+  hasCheckpoint: boolean;
+}
+
+export interface GeneratedPlan {
+  name: string;
+  description: string;
+  tasks: GeneratedTask[];
+  estimatedCost: number;
+  estimatedTime: string;
+}
+
+export async function generatePlan(
+  prompt: string,
+  repo?: string
+): Promise<GeneratedPlan> {
+  const res = await fetch(`${API_BASE}/generate-plan`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ prompt, repo }),
+  });
+  return handleResponse(res);
+}
+
+// ============ Health Check APIs ============
+
+export interface HealthStatus {
+  status: 'healthy' | 'unhealthy';
+  timestamp: string;
+  version: string;
+  uptime: number;
+  database: {
+    status: string;
+    latencyMs: number;
+  };
+  memory: {
+    heapUsed: number;
+    heapTotal: number;
+    unit: string;
+  };
+}
+
+export async function checkHealth(): Promise<HealthStatus> {
+  const res = await fetch(`${API_BASE}/health`);
+  return handleResponse(res);
+}
+
+// ============ Recovery Benchmark APIs ============
+
+export interface RecoveryBenchmark {
+  actual: {
+    crashes: number;
+    tokensUsed: number;
+    costUsd: number;
+    timeMs: number;
+    tasksCompleted: number;
+  };
+  withoutX404r: {
+    tokensRequired: number;
+    costUsd: number;
+    timeMs: number;
+    tasksRestarted: number;
+  };
+  savings: {
+    tokensSaved: number;
+    costSavedUsd: number;
+    timeSavedMs: number;
+    percentTokensSaved: number;
+    percentCostSaved: number;
+    percentTimeSaved: number;
+  };
+  quality: {
+    recoverySuccessRate: number;
+    avgCheckpointAgeMs: number;
+    checkpointsAvailable: number;
+  };
+  explanation: {
+    withX404r: string;
+    withoutX404r: string;
+    savings: string;
+  };
+}
+
+export async function getRecoveryBenchmark(): Promise<RecoveryBenchmark> {
+  const res = await fetch(`${API_BASE}/metrics/benchmark`, {
+    headers: getHeaders(),
+  });
+  return handleResponse(res);
+}
+
 // ============ Auth Helpers ============
 
 /**
@@ -403,4 +588,80 @@ export function loginWithApiKey(apiKey: string): void {
  */
 export function getGitHubLoginUrl(): string {
   return `${API_BASE}/auth/github`;
+}
+
+// ============ Demo APIs ============
+
+export interface DemoScenarioResponse {
+  jobId: string;
+  taskIds: string[];
+  targetCrashTask: string;
+  estimatedDuration: number;
+}
+
+export interface KillWorkerDemoResponse {
+  taskId: string;
+  killedAt: string;
+  lastCheckpoint: {
+    id: string;
+    stepNumber: number;
+    state: Record<string, unknown>;
+  } | null;
+  lostState: {
+    stepsLost: number;
+    tokensLost: number;
+  };
+  vanillaComparison: {
+    totalTokensIfRestarted: number;
+    totalCostIfRestarted: number;
+  };
+}
+
+export interface DemoTask {
+  id: string;
+  name: string;
+  type: string;
+  duration: number;
+  status: 'pending' | 'running' | 'done' | 'crashed' | 'recovering';
+  progress: number;
+  checkpoint?: {
+    stepNumber: number;
+    state: Record<string, unknown>;
+  };
+}
+
+export interface DemoState {
+  jobId: string;
+  tasks: DemoTask[];
+  currentTaskIndex: number;
+  crashed: boolean;
+  recovering: boolean;
+  completed: boolean;
+  tokensUsed: number;
+  tokensSaved: number;
+  startTime: number;
+  crashTime?: number;
+  recoveryTime?: number;
+}
+
+export async function createDemoScenario(
+  scenario: string
+): Promise<DemoScenarioResponse> {
+  const res = await fetch(`${API_BASE}/demo/scenario`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ scenario }),
+  });
+  return handleResponse(res);
+}
+
+export async function killWorkerDemo(
+  taskId: string
+): Promise<KillWorkerDemoResponse> {
+  const res = await fetch(`${API_BASE}/chaos/kill-worker-demo`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ taskId }),
+  });
+  return handleResponse(res);
 }

@@ -1,14 +1,17 @@
 /**
- * AgentDB Client
- * Main entry point for the SDK
+ * x404r Client
+ * Main entry point for the SDK - supports both embedded and cloud modes
  */
 
-import { Pool, PoolConfig } from 'pg';
 import { createAIProvider, MockAIProvider } from './ai/index.js';
+import { EmbeddedBackend, CloudBackend, isEmbeddedBackend } from './backend/index.js';
+import type { Backend } from './backend/index.js';
 import { WorkflowBuilder } from './workflow.js';
 import { Worker } from './worker.js';
 import type {
-  AgentDBConfig,
+  X404rConfig,
+  EmbeddedConfig,
+  CloudConfig,
   AIProvider,
   WorkflowDefinition,
   WorkerConfig,
@@ -16,6 +19,8 @@ import type {
   Task,
   EventHandler,
   WorkflowEvent,
+  isEmbeddedConfig,
+  isCloudConfig,
 } from './types.js';
 
 /**
@@ -24,72 +29,127 @@ import type {
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 /**
- * AgentDB Client
+ * x404r Client
  *
- * @example
+ * Supports two modes:
+ *
+ * **Embedded Mode** - Direct DB connection, run workers locally
  * ```typescript
- * const agent = new AgentDB({
+ * const runtime = new x404r({
+ *   mode: 'embedded', // optional, default
  *   connectionString: process.env.DATABASE_URL,
- *   ai: {
- *     provider: 'gemini',
- *     apiKey: process.env.GEMINI_API_KEY,
- *   },
+ *   ai: { provider: 'gemini', apiKey: '...' }
  * });
+ * runtime.worker().start(); // Run workers locally
+ * ```
  *
- * const workflow = agent.workflow('my-workflow', {
- *   steps: [
- *     { name: 'step1', handler: async (ctx) => { ... } },
- *   ],
+ * **Cloud Mode** - Connect to hosted API, workers run on Lambda
+ * ```typescript
+ * const runtime = new x404r({
+ *   mode: 'cloud',
+ *   apiKey: 'x404r_live_...'
  * });
- *
- * await workflow.run({ input: 'data' });
+ * // No workers needed - Lambda handles execution
+ * const result = await runtime.submit('my-workflow', { input });
  * ```
  */
 export class AgentDB {
-  private pool: Pool;
+  private backend: Backend;
   private aiProvider!: AIProvider;
-  private tenantId: string;
+  private mode: 'embedded' | 'cloud';
   private debug: boolean;
   private eventHandlers: EventHandler[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private workflows: Map<string, WorkflowBuilder<any, any>> = new Map();
-  private aiInitPromise: Promise<void>;
+  private initPromise: Promise<void>;
+  private tenantId: string;
 
-  constructor(config: AgentDBConfig) {
-    this.pool = new Pool({
-      connectionString: config.connectionString,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : { rejectUnauthorized: false },
-    });
-
-    this.tenantId = config.tenantId || DEFAULT_TENANT_ID;
+  constructor(config: X404rConfig) {
     this.debug = config.debug || false;
+    this.mode = config.mode === 'cloud' ? 'cloud' : 'embedded';
 
-    // Initialize AI provider asynchronously
-    if (config.ai) {
-      this.aiInitPromise = createAIProvider(config.ai).then(provider => {
-        this.aiProvider = provider;
+    if (this.mode === 'cloud') {
+      // Cloud mode - HTTP API client
+      const cloudConfig = config as CloudConfig;
+      this.backend = new CloudBackend({
+        apiKey: cloudConfig.apiKey,
+        baseUrl: cloudConfig.baseUrl,
       });
+      this.tenantId = ''; // Managed by API
+      this.aiProvider = new MockAIProvider(); // AI calls handled by Lambda
+      this.initPromise = this.backend.ready();
     } else {
-      this.aiProvider = new MockAIProvider();
-      this.aiInitPromise = Promise.resolve();
+      // Embedded mode - direct DB connection
+      const embeddedConfig = config as EmbeddedConfig;
+      this.tenantId = embeddedConfig.tenantId || DEFAULT_TENANT_ID;
+      this.backend = new EmbeddedBackend({
+        connectionString: embeddedConfig.connectionString,
+        tenantId: this.tenantId,
+      });
+
+      // Initialize AI provider asynchronously
+      if (embeddedConfig.ai) {
+        this.initPromise = Promise.all([
+          this.backend.ready(),
+          createAIProvider(embeddedConfig.ai).then((provider) => {
+            this.aiProvider = provider;
+          }),
+        ]).then(() => {});
+      } else {
+        this.aiProvider = new MockAIProvider();
+        this.initPromise = this.backend.ready();
+      }
     }
   }
 
   /**
-   * Wait for AI provider to be initialized
+   * Wait for client to be ready
    */
   async ready(): Promise<this> {
-    await this.aiInitPromise;
+    await this.initPromise;
     return this;
   }
 
   /**
+   * Get current mode
+   */
+  get currentMode(): 'embedded' | 'cloud' {
+    return this.mode;
+  }
+
+  /**
+   * Check if running in embedded mode
+   */
+  get isEmbedded(): boolean {
+    return this.mode === 'embedded';
+  }
+
+  /**
+   * Check if running in cloud mode
+   */
+  get isCloud(): boolean {
+    return this.mode === 'cloud';
+  }
+
+  // ============ Workflow Definition ============
+
+  /**
    * Define a new workflow
+   *
+   * In embedded mode, the workflow definition includes step handlers.
+   * In cloud mode, workflows must be pre-registered on the platform.
    */
   workflow<TInput = unknown, TOutput = unknown>(
     name: string,
     definition: Omit<WorkflowDefinition<TInput, TOutput>, 'name'>
   ): WorkflowBuilder<TInput, TOutput> {
+    if (this.mode === 'cloud') {
+      this.log(
+        'Warning: Workflow definitions in cloud mode are for reference only. ' +
+          'Actual workflow logic runs on Lambda workers.'
+      );
+    }
+
     const fullDefinition: WorkflowDefinition<TInput, TOutput> = {
       name,
       ...definition,
@@ -106,11 +166,164 @@ export class AgentDB {
   }
 
   /**
+   * Get a registered workflow builder by name
+   */
+  getWorkflowBuilder(name: string): WorkflowBuilder<any, any> | undefined {
+    return this.workflows.get(name);
+  }
+
+  // ============ Worker (Embedded Mode Only) ============
+
+  /**
    * Create a worker to process tasks
+   *
+   * @throws Error if called in cloud mode
    */
   worker(config: WorkerConfig = {}): Worker {
+    if (this.mode === 'cloud') {
+      throw new Error(
+        'Workers are not available in cloud mode. ' +
+          'Tasks are executed by Lambda workers automatically.'
+      );
+    }
+
     return new Worker(this, config);
   }
+
+  // ============ Cloud Mode: Submit & Status ============
+
+  /**
+   * Submit a workflow for execution (cloud mode)
+   *
+   * In cloud mode, this submits to the API and Lambda workers execute it.
+   * In embedded mode, this creates the workflow and you need to run workers.
+   */
+  async submit(
+    workflowName: string,
+    input: Record<string, unknown>,
+    options: { priority?: number; wait?: boolean; timeout?: number } = {}
+  ): Promise<{ workflowId: string; status: string; output?: unknown }> {
+    if (this.mode === 'cloud') {
+      const cloudBackend = this.backend as CloudBackend;
+      const result = await cloudBackend.submit(workflowName, input, options);
+
+      if (options.wait) {
+        const workflow = await cloudBackend.waitForCompletion(result.workflowId, {
+          timeout: options.timeout,
+        });
+        return {
+          workflowId: workflow.id,
+          status: workflow.status,
+          output: workflow.output,
+        };
+      }
+
+      return result;
+    } else {
+      // Embedded mode - create workflow directly
+      const workflow = await this.backend.createWorkflow(
+        workflowName,
+        '1.0.0',
+        input,
+        options.priority
+      );
+
+      return {
+        workflowId: workflow.id,
+        status: workflow.status,
+      };
+    }
+  }
+
+  /**
+   * Get workflow status
+   */
+  async status(workflowId: string): Promise<Workflow | null> {
+    return this.backend.getWorkflow(workflowId);
+  }
+
+  /**
+   * List workflows
+   */
+  async list(options?: {
+    status?: 'pending' | 'running' | 'completed' | 'failed';
+    limit?: number;
+    offset?: number;
+  }): Promise<Workflow[]> {
+    return this.backend.listWorkflows(options);
+  }
+
+  /**
+   * Wait for workflow completion
+   */
+  async wait(
+    workflowId: string,
+    options: { timeout?: number; pollInterval?: number } = {}
+  ): Promise<Workflow> {
+    if (this.mode === 'cloud') {
+      return (this.backend as CloudBackend).waitForCompletion(
+        workflowId,
+        options
+      );
+    }
+
+    // Embedded mode - poll for completion
+    const { timeout = 300000, pollInterval = 1000 } = options;
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      const workflow = await this.backend.getWorkflow(workflowId);
+
+      if (!workflow) {
+        throw new Error(`Workflow ${workflowId} not found`);
+      }
+
+      if (workflow.status === 'completed' || workflow.status === 'failed') {
+        return workflow;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    }
+
+    throw new Error(`Workflow ${workflowId} timed out after ${timeout}ms`);
+  }
+
+  // ============ Time Travel ============
+
+  /**
+   * Replay a workflow from a checkpoint
+   */
+  async replay(
+    workflowId: string,
+    checkpointId: string,
+    newInput?: Record<string, unknown>
+  ): Promise<Workflow> {
+    if (!this.backend.replayFromCheckpoint) {
+      throw new Error('Replay not supported in this mode');
+    }
+    return this.backend.replayFromCheckpoint(workflowId, checkpointId, newInput);
+  }
+
+  /**
+   * Get checkpoints for a workflow
+   */
+  async checkpoints(workflowId: string) {
+    return this.backend.getWorkflowCheckpoints(workflowId);
+  }
+
+  // ============ Cost Tracking ============
+
+  /**
+   * Get cost summary for a workflow
+   */
+  async cost(workflowId: string) {
+    if (!this.backend.getWorkflowCost) {
+      return { totalTokens: 0, estimatedCostUsd: 0, savedByRecoveryUsd: 0 };
+    }
+    return this.backend.getWorkflowCost(workflowId);
+  }
+
+  // ============ Events ============
 
   /**
    * Register an event handler
@@ -135,11 +348,23 @@ export class AgentDB {
     }
   }
 
+  // ============ Accessors ============
+
   /**
-   * Get the database pool
+   * Get the backend instance
    */
-  get db(): Pool {
-    return this.pool;
+  getBackend(): Backend {
+    return this.backend;
+  }
+
+  /**
+   * Get the database pool (embedded mode only)
+   */
+  get db() {
+    if (this.mode === 'cloud') {
+      throw new Error('Direct database access not available in cloud mode');
+    }
+    return (this.backend as EmbeddedBackend).db;
   }
 
   /**
@@ -165,7 +390,7 @@ export class AgentDB {
     }
   }
 
-  // ============ Database Operations ============
+  // ============ Database Operations (for WorkflowBuilder compatibility) ============
 
   /**
    * Create a workflow record
@@ -176,24 +401,14 @@ export class AgentDB {
     input: Record<string, unknown>,
     priority: number = 0
   ): Promise<Workflow> {
-    const result = await this.pool.query<any>(
-      `INSERT INTO jobs (tenant_id, name, description, input_payload, priority, status)
-       VALUES ($1, $2, $3, $4, $5, 'pending')
-       RETURNING *`,
-      [this.tenantId, name, version, JSON.stringify(input), priority]
-    );
-    return this.mapWorkflow(result.rows[0]);
+    return this.backend.createWorkflow(name, version, input, priority);
   }
 
   /**
-   * Get a workflow by ID
+   * Get a workflow from database by ID
    */
   async getWorkflow(id: string): Promise<Workflow | null> {
-    const result = await this.pool.query<any>(
-      'SELECT * FROM jobs WHERE id = $1 AND tenant_id = $2',
-      [id, this.tenantId]
-    );
-    return result.rows[0] ? this.mapWorkflow(result.rows[0]) : null;
+    return this.backend.getWorkflow(id);
   }
 
   /**
@@ -205,161 +420,69 @@ export class AgentDB {
     output?: Record<string, unknown>,
     error?: string
   ): Promise<void> {
-    const completedAt = status === 'completed' || status === 'failed' ? 'now()' : null;
-    await this.pool.query(
-      `UPDATE jobs SET
-        status = $2,
-        result_payload = COALESCE($3, result_payload),
-        completed_at = $4,
-        updated_at = now()
-       WHERE id = $1 AND tenant_id = $5`,
-      [id, status, output ? JSON.stringify(output) : null, completedAt, this.tenantId]
+    return this.backend.updateWorkflowStatus(
+      id,
+      status as any,
+      output,
+      error
     );
   }
 
   /**
    * Create tasks for a workflow
    */
-  async createTasks(workflowId: string, tasks: Array<{
-    name: string;
-    type: string;
-    input: Record<string, unknown>;
-    dependsOn: string[];
-    maxAttempts?: number;
-  }>): Promise<Task[]> {
-    if (tasks.length === 0) return [];
-
-    const values: unknown[] = [];
-    const placeholders: string[] = [];
-    let paramIndex = 1;
-
-    for (const task of tasks) {
-      placeholders.push(
-        `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
-      );
-      values.push(
-        this.tenantId,
-        workflowId,
-        task.type,
-        task.name,
-        JSON.stringify(task.input),
-        task.dependsOn,
-        task.maxAttempts || 3
-      );
-    }
-
-    const result = await this.pool.query<any>(
-      `INSERT INTO task_nodes (tenant_id, job_id, task_type, name, input_payload, depends_on, max_attempts)
-       VALUES ${placeholders.join(', ')}
-       RETURNING *`,
-      values
-    );
-
-    return result.rows.map(this.mapTask);
+  async createTasks(
+    workflowId: string,
+    tasks: Array<{
+      name: string;
+      type: string;
+      input: Record<string, unknown>;
+      dependsOn: string[];
+      maxAttempts?: number;
+    }>
+  ): Promise<Task[]> {
+    return this.backend.createTasks(workflowId, tasks);
   }
 
   /**
-   * Claim a task atomically
+   * Claim a task atomically (embedded mode only)
    */
   async claimTask(workerId: string, taskTypes?: string[]): Promise<Task | null> {
-    let query = `
-      WITH ready_tasks AS (
-        SELECT t.id FROM task_nodes t
-        JOIN jobs j ON t.job_id = j.id
-        JOIN tenants ten ON t.tenant_id = ten.id
-        WHERE t.status = 'pending'
-          AND t.tenant_id = $1
-          AND NOT EXISTS (
-            SELECT 1 FROM task_nodes dep
-            WHERE dep.id = ANY(t.depends_on) AND dep.status != 'done'
-          )
-    `;
-
-    const params: unknown[] = [this.tenantId, workerId];
-
-    if (taskTypes && taskTypes.length > 0) {
-      params.push(taskTypes);
-      query += ` AND t.task_type = ANY($${params.length})`;
+    if (!isEmbeddedBackend(this.backend)) {
+      throw new Error('Task claiming not available in cloud mode');
     }
-
-    query += `
-        ORDER BY
-          CASE ten.plan
-            WHEN 'enterprise' THEN 0
-            WHEN 'team' THEN 1
-            WHEN 'pro' THEN 2
-            ELSE 3
-          END,
-          j.priority DESC,
-          t.created_at ASC
-        LIMIT 1
-        FOR UPDATE OF t SKIP LOCKED
-      )
-      UPDATE task_nodes
-      SET status = 'claimed',
-          claimed_by = $2,
-          claimed_at = now(),
-          heartbeat_at = now(),
-          attempt_count = attempt_count + 1,
-          updated_at = now()
-      FROM ready_tasks
-      WHERE task_nodes.id = ready_tasks.id
-      RETURNING task_nodes.*
-    `;
-
-    const result = await this.pool.query<any>(query, params);
-    return result.rows[0] ? this.mapTask(result.rows[0]) : null;
+    return this.backend.claimTask(workerId, taskTypes);
   }
 
   /**
-   * Update task heartbeat
+   * Update task heartbeat (embedded mode only)
    */
   async heartbeat(taskId: string): Promise<void> {
-    await this.pool.query(
-      'UPDATE task_nodes SET heartbeat_at = now() WHERE id = $1',
-      [taskId]
-    );
+    if (!isEmbeddedBackend(this.backend)) {
+      throw new Error('Heartbeat not available in cloud mode');
+    }
+    return this.backend.heartbeat(taskId);
   }
 
   /**
    * Complete a task
    */
   async completeTask(taskId: string, output: Record<string, unknown>): Promise<void> {
-    await this.pool.query(
-      `UPDATE task_nodes SET
-        status = 'done',
-        output_payload = $2,
-        completed_at = now(),
-        updated_at = now()
-       WHERE id = $1`,
-      [taskId, JSON.stringify(output)]
-    );
+    return this.backend.completeTask(taskId, output);
   }
 
   /**
    * Fail a task
    */
   async failTask(taskId: string, error: string): Promise<void> {
-    await this.pool.query(
-      `UPDATE task_nodes SET
-        status = 'failed',
-        error_message = $2,
-        completed_at = now(),
-        updated_at = now()
-       WHERE id = $1`,
-      [taskId, error]
-    );
+    return this.backend.failTask(taskId, error);
   }
 
   /**
    * Get tasks for a workflow
    */
   async getWorkflowTasks(workflowId: string): Promise<Task[]> {
-    const result = await this.pool.query<any>(
-      'SELECT * FROM task_nodes WHERE job_id = $1 ORDER BY created_at',
-      [workflowId]
-    );
-    return result.rows.map(this.mapTask);
+    return this.backend.getWorkflowTasks(workflowId);
   }
 
   /**
@@ -370,33 +493,16 @@ export class AgentDB {
     stepIndex: number,
     state: Record<string, unknown>
   ): Promise<void> {
-    await this.pool.query(
-      `INSERT INTO checkpoints (task_id, step_number, state)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (task_id, step_number)
-       DO UPDATE SET state = $3, created_at = now()`,
-      [taskId, stepIndex, JSON.stringify(state)]
-    );
+    return this.backend.createCheckpoint(taskId, stepIndex, state);
   }
 
   /**
    * Get latest checkpoint for a task
    */
-  async getCheckpoint(taskId: string): Promise<{ stepIndex: number; state: Record<string, unknown> } | null> {
-    const result = await this.pool.query<any>(
-      `SELECT step_number, state FROM checkpoints
-       WHERE task_id = $1
-       ORDER BY step_number DESC
-       LIMIT 1`,
-      [taskId]
-    );
-
-    if (result.rows.length === 0) return null;
-
-    return {
-      stepIndex: result.rows[0].step_number,
-      state: result.rows[0].state,
-    };
+  async getCheckpoint(
+    taskId: string
+  ): Promise<{ stepIndex: number; state: Record<string, unknown> } | null> {
+    return this.backend.getCheckpoint(taskId);
   }
 
   /**
@@ -411,123 +517,51 @@ export class AgentDB {
     errorCategory?: string,
     resolution?: string
   ): Promise<void> {
-    await this.pool.query(
-      `INSERT INTO memory_vectors
-       (tenant_id, task_id, event_type, context_summary, embedding, task_type, error_category, resolution)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [this.tenantId, taskId, eventType, summary, embedding, taskType, errorCategory, resolution]
+    return this.backend.storeMemory(
+      taskId,
+      eventType,
+      summary,
+      embedding,
+      taskType,
+      errorCategory,
+      resolution
     );
   }
 
   /**
    * Query similar memories
    */
-  async queryMemories(embedding: number[], taskType?: string, limit = 5): Promise<Array<{
-    summary: string;
-    eventType: string;
-    resolution?: string;
-    similarity: number;
-  }>> {
-    const embeddingStr = `ARRAY[${embedding.join(',')}]::FLOAT8[]`;
-
-    let query = `
-      SELECT
-        context_summary as summary,
-        event_type,
-        resolution,
-        COALESCE(
-          (SELECT SUM(a * b) FROM UNNEST(embedding, ${embeddingStr}) AS t(a, b)) /
-          NULLIF(
-            SQRT((SELECT SUM(a * a) FROM UNNEST(embedding) AS t(a))) *
-            SQRT((SELECT SUM(b * b) FROM UNNEST(${embeddingStr}) AS t(b))),
-            0
-          ),
-          0
-        ) AS similarity
-      FROM memory_vectors
-      WHERE tenant_id = $1
-    `;
-
-    const params: unknown[] = [this.tenantId];
-
-    if (taskType) {
-      params.push(taskType);
-      query += ` AND task_type = $${params.length}`;
-    }
-
-    query += ` ORDER BY similarity DESC LIMIT $${params.length + 1}`;
-    params.push(limit);
-
-    const result = await this.pool.query<any>(query, params);
-    return result.rows;
+  async queryMemories(
+    embedding: number[],
+    taskType?: string,
+    limit = 5
+  ): Promise<
+    Array<{
+      summary: string;
+      eventType: string;
+      resolution?: string;
+      similarity: number;
+    }>
+  > {
+    return this.backend.queryMemories(embedding, taskType, limit);
   }
 
   /**
    * Check if workflow is complete
    */
-  async isWorkflowComplete(workflowId: string): Promise<{ complete: boolean; failed: number; done: number; pending: number }> {
-    const result = await this.pool.query<any>(
-      `SELECT
-        COUNT(*) FILTER (WHERE status = 'done') as done,
-        COUNT(*) FILTER (WHERE status = 'failed') as failed,
-        COUNT(*) FILTER (WHERE status NOT IN ('done', 'failed')) as pending
-       FROM task_nodes WHERE job_id = $1`,
-      [workflowId]
-    );
-
-    const row = result.rows[0];
-    return {
-      complete: parseInt(row.pending) === 0,
-      done: parseInt(row.done),
-      failed: parseInt(row.failed),
-      pending: parseInt(row.pending),
-    };
+  async isWorkflowComplete(
+    workflowId: string
+  ): Promise<{ complete: boolean; failed: number; done: number; pending: number }> {
+    return this.backend.isWorkflowComplete(workflowId);
   }
 
   /**
-   * Close the database connection
+   * Close the client
    */
   async close(): Promise<void> {
-    await this.pool.end();
-  }
-
-  // ============ Mappers ============
-
-  private mapWorkflow(row: any): Workflow {
-    return {
-      id: row.id,
-      name: row.name,
-      version: row.description || '1.0.0',
-      status: row.status,
-      input: row.input_payload,
-      output: row.result_payload,
-      tenantId: row.tenant_id,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      completedAt: row.completed_at,
-    };
-  }
-
-  private mapTask(row: any): Task {
-    return {
-      id: row.id,
-      workflowId: row.job_id,
-      name: row.name,
-      type: row.task_type,
-      status: row.status,
-      input: row.input_payload,
-      output: row.output_payload,
-      error: row.error_message,
-      dependsOn: row.depends_on || [],
-      claimedBy: row.claimed_by,
-      claimedAt: row.claimed_at,
-      heartbeatAt: row.heartbeat_at,
-      attemptCount: row.attempt_count,
-      maxAttempts: row.max_attempts,
-      tenantId: row.tenant_id,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      completedAt: row.completed_at,
-    };
+    await this.backend.close();
   }
 }
+
+// Export as both AgentDB and x404r for flexibility
+export { AgentDB as x404r };

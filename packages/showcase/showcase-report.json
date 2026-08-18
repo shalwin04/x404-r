@@ -1,0 +1,83 @@
+{
+  "task": {
+    "id": "code-analysis",
+    "name": "Code Analysis Pipeline",
+    "description": "Analyze code for quality, security, and improvements",
+    "steps": [
+      {
+        "id": "step-1",
+        "name": "Parse Structure",
+        "prompt": "Analyze the following TypeScript code structure. Identify all functions, classes, and exports. List them with their line numbers.\n\n```typescript\n// Example: A simple auth module\nexport interface User {\n  id: string;\n  email: string;\n  passwordHash: string;\n  createdAt: Date;\n}\n\nexport class AuthService {\n  private users: Map<string, User> = new Map();\n\n  async register(email: string, password: string): Promise<User> {\n    const id = crypto.randomUUID();\n    const passwordHash = await this.hashPassword(password);\n    const user: User = { id, email, passwordHash, createdAt: new Date() };\n    this.users.set(id, user);\n    return user;\n  }\n\n  async login(email: string, password: string): Promise<string | null> {\n    const user = Array.from(this.users.values()).find(u => u.email === email);\n    if (!user) return null;\n    const valid = await this.verifyPassword(password, user.passwordHash);\n    return valid ? this.generateToken(user) : null;\n  }\n\n  private async hashPassword(password: string): Promise<string> {\n    return password; // TODO: implement proper hashing\n  }\n\n  private async verifyPassword(password: string, hash: string): Promise<boolean> {\n    return password === hash;\n  }\n\n  private generateToken(user: User): string {\n    return Buffer.from(JSON.stringify({ userId: user.id, exp: Date.now() + 3600000 })).toString('base64');\n  }\n}\n```\n\nProvide a structured analysis of the code components.",
+        "estimatedTokens": 800
+      },
+      {
+        "id": "step-2",
+        "name": "Security Audit",
+        "prompt": "Based on the code structure identified, perform a security audit. Look for:\n1. Authentication vulnerabilities\n2. Password handling issues\n3. Token security problems\n4. Data exposure risks\n\nPrevious analysis found these components:\n- User interface with passwordHash field\n- AuthService class with register, login methods\n- Password hashing using placeholder implementation\n- Token generation using base64 encoding\n\nIdentify all security issues with severity levels (Critical, High, Medium, Low).",
+        "estimatedTokens": 600
+      },
+      {
+        "id": "step-3",
+        "name": "Performance Review",
+        "prompt": "Review the code for performance issues. Consider:\n1. Memory usage (storing users in Map)\n2. Async operations efficiency\n3. Potential bottlenecks at scale\n4. Caching opportunities\n\nThe code uses an in-memory Map for user storage and has async password operations.\n\nProvide performance recommendations with expected impact.",
+        "estimatedTokens": 500
+      },
+      {
+        "id": "step-4",
+        "name": "Best Practices Check",
+        "prompt": "Check the code against TypeScript/JavaScript best practices:\n1. Type safety\n2. Error handling\n3. Code organization\n4. Naming conventions\n5. Documentation\n\nIdentify violations and suggest improvements.",
+        "estimatedTokens": 500
+      },
+      {
+        "id": "step-5",
+        "name": "Generate Report",
+        "prompt": "Synthesize all previous analyses into a final code review report. Include:\n1. Executive Summary\n2. Critical Issues (must fix)\n3. Recommendations (should fix)\n4. Nice-to-haves\n5. Overall code quality score (1-10)\n\nFormat as a structured report that could be shared with a development team.",
+        "estimatedTokens": 700
+      }
+    ]
+  },
+  "withSdk": {
+    "startTime": 1787033479274,
+    "endTime": 1787033562918,
+    "totalTimeMs": 83641,
+    "stepsCompleted": 5,
+    "totalSteps": 5,
+    "tokensUsed": {
+      "input": 1154,
+      "output": 11807,
+      "total": 12961
+    },
+    "costUsd": 0.0036286499999999998,
+    "checkpointsSaved": 6,
+    "crashedAt": 2,
+    "recoveredFrom": 2,
+    "tokensWastedOnCrash": 250,
+    "finalState": "recovered"
+  },
+  "vanilla": {
+    "startTime": 1787033562920,
+    "endTime": 1787033710167,
+    "totalTimeMs": 147247,
+    "stepsCompleted": 5,
+    "totalSteps": 5,
+    "tokensUsed": {
+      "input": 1154,
+      "output": 15699,
+      "total": 16853
+    },
+    "costUsd": 0.00479625,
+    "checkpointsSaved": 0,
+    "crashedAt": 2,
+    "tokensWastedOnCrash": 3362,
+    "finalState": "recovered"
+  },
+  "savings": {
+    "tokensSaved": 3112,
+    "costSavedUsd": 0.028008,
+    "timeSavedMs": 0,
+    "percentTokensSaved": 92.5639500297442,
+    "percentCostSaved": 92.5639500297442
+  },
+  "crashSimulated": true,
+  "crashAtStep": 2
+}

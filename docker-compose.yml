@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # CockroachDB - Single node for development
+  cockroachdb:
+    image: cockroachdb/cockroach:v23.2.0
+    command: start-single-node --insecure
+    ports:
+      - "26257:26257"  # SQL port
+      - "8080:8080"    # Admin UI
+    volumes:
+      - cockroach-data:/cockroach/cockroach-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Initialize database schema
+  db-init:
+    image: cockroachdb/cockroach:v23.2.0
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+    volumes:
+      - ./scripts/setup-db.sql:/setup-db.sql:ro
+    command: >
+      sql --insecure --host=cockroachdb:26257
+      --execute="CREATE DATABASE IF NOT EXISTS x404r;"
+      --file=/setup-db.sql --database=x404r
+    restart: "no"
+
+  # x404-r API Server
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://root@cockroachdb:26257/x404r?sslmode=disable
+      - DEMO_MODE=true
+      - NODE_ENV=production
+      - PORT=3001
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Dashboard (Next.js)
+  dashboard:
+    build:
+      context: ./packages/dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NODE_ENV=production
+    depends_on:
+      - server
+
+volumes:
+  cockroach-data:
+
+networks:
+  default:
+    name: x404r-network

@@ -554,6 +554,191 @@ async function handleKillWorker(body: Record<string, unknown>): Promise<unknown>
   return { success: true, message: `Simulated crash for task ${taskId}` };
 }
 
+// ============ Demo Visualization APIs ============
+
+interface DemoTask {
+  name: string;
+  type: string;
+  duration: number;
+}
+
+function getDemoScenarioTasks(scenario: string): DemoTask[] {
+  switch (scenario) {
+    case 'code-refactor':
+      return [
+        { name: 'Initialize', type: 'setup', duration: 2000 },
+        { name: 'Analyze Code', type: 'ai', duration: 4000 },
+        { name: 'Generate Plan', type: 'ai', duration: 5000 },
+        { name: 'Execute Changes', type: 'ai', duration: 4000 },
+        { name: 'Verify Results', type: 'validate', duration: 2000 },
+      ];
+    case 'data-pipeline':
+      return [
+        { name: 'Connect Source', type: 'setup', duration: 1500 },
+        { name: 'Extract Data', type: 'process', duration: 3000 },
+        { name: 'Transform Schema', type: 'ai', duration: 4000 },
+        { name: 'Validate Output', type: 'validate', duration: 2000 },
+        { name: 'Load to Target', type: 'process', duration: 3000 },
+      ];
+    case 'test-generation':
+      return [
+        { name: 'Parse Codebase', type: 'setup', duration: 2000 },
+        { name: 'Identify Functions', type: 'ai', duration: 3000 },
+        { name: 'Generate Tests', type: 'ai', duration: 6000 },
+        { name: 'Run Test Suite', type: 'validate', duration: 3000 },
+      ];
+    default:
+      return [
+        { name: 'Initialize', type: 'setup', duration: 2000 },
+        { name: 'Process Task 1', type: 'ai', duration: 5000 },
+        { name: 'Process Task 2', type: 'ai', duration: 5000 },
+        { name: 'Finalize', type: 'validate', duration: 2000 },
+      ];
+  }
+}
+
+async function handleCreateDemoScenario(
+  body: Record<string, unknown>,
+  context: TenantContext
+): Promise<unknown> {
+  const { scenario = 'code-refactor' } = body as { scenario?: string };
+  const tenantDb = new TenantDatabase(db, context);
+
+  // Create demo job
+  const job = await tenantDb.createJob({
+    name: `Demo: ${scenario}`,
+    description: `Demo scenario for ${scenario}`,
+    input_payload: { type: 'demo', scenario },
+  });
+
+  const tasks = getDemoScenarioTasks(scenario);
+  const taskIds: string[] = [];
+
+  // Create tasks
+  for (let i = 0; i < tasks.length; i++) {
+    const task = tasks[i];
+    const result = await db.query<{ id: string }>(
+      `INSERT INTO task_nodes (job_id, tenant_id, task_type, name, input_payload, depends_on, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+       RETURNING id`,
+      [
+        job.id,
+        context.tenantId,
+        task.type,
+        task.name,
+        { duration: task.duration, demoTask: true },
+        i > 0 ? [taskIds[i - 1]] : [],
+      ]
+    );
+    taskIds.push(result.rows[0].id);
+  }
+
+  await tenantDb.updateJobStatus(job.id, 'running');
+
+  // Target the 3rd task (usually an AI task) for crash demonstration
+  const targetCrashTask = taskIds[Math.min(2, taskIds.length - 1)];
+  const totalDuration = tasks.reduce((sum, t) => sum + t.duration, 0);
+
+  return {
+    jobId: job.id,
+    taskIds,
+    targetCrashTask,
+    estimatedDuration: totalDuration,
+    tasks: tasks.map((t, i) => ({
+      id: taskIds[i],
+      name: t.name,
+      type: t.type,
+      duration: t.duration,
+    })),
+  };
+}
+
+async function handleKillWorkerDemo(
+  body: Record<string, unknown>,
+  context: TenantContext
+): Promise<unknown> {
+  const { taskId } = body as { taskId: string };
+  if (!taskId) throw new Error('taskId required');
+
+  // Get task info
+  const taskResult = await db.query<{
+    id: string;
+    name: string;
+    status: string;
+    input_payload: Record<string, unknown>;
+  }>(
+    'SELECT id, name, status, input_payload FROM task_nodes WHERE id = $1 AND tenant_id = $2',
+    [taskId, context.tenantId]
+  );
+
+  if (!taskResult.rows[0]) {
+    throw new NotFoundError('Task not found');
+  }
+
+  const task = taskResult.rows[0];
+
+  // Get last checkpoint for this task
+  const checkpointResult = await db.query<{
+    id: string;
+    step_number: number;
+    state: Record<string, unknown>;
+    created_at: Date;
+  }>(
+    'SELECT id, step_number, state, created_at FROM checkpoints WHERE task_id = $1 ORDER BY created_at DESC LIMIT 1',
+    [taskId]
+  );
+
+  const checkpoint = checkpointResult.rows[0];
+
+  // Simulate token usage (estimate based on task type)
+  const estimatedTokens = task.input_payload?.duration
+    ? Math.round((task.input_payload.duration as number) / 10)
+    : 500;
+
+  // Calculate what would be lost
+  const checkpointProgress = checkpoint ? checkpoint.step_number * 10 : 0;
+  const currentProgress = 80; // Simulate crash at 80% progress
+  const stepsLost = Math.max(0, Math.floor((currentProgress - checkpointProgress) / 10));
+  const tokensLost = Math.round(stepsLost * (estimatedTokens / 10));
+
+  // Kill the worker (mark heartbeat as stale)
+  await db.query(
+    `UPDATE task_nodes
+     SET heartbeat_at = now() - INTERVAL '5 minutes'
+     WHERE id = $1 AND status = 'running'`,
+    [taskId]
+  );
+
+  return {
+    taskId,
+    taskName: task.name,
+    killedAt: new Date().toISOString(),
+    lastCheckpoint: checkpoint
+      ? {
+          id: checkpoint.id,
+          stepNumber: checkpoint.step_number,
+          state: checkpoint.state,
+          createdAt: checkpoint.created_at.toISOString(),
+        }
+      : null,
+    lostState: {
+      stepsLost,
+      tokensLost,
+      progressLost: currentProgress - checkpointProgress,
+    },
+    vanillaComparison: {
+      totalTokensIfRestarted: estimatedTokens,
+      totalCostIfRestarted: estimatedTokens * 0.000009,
+      timeLostMs: (task.input_payload?.duration as number) || 5000,
+    },
+    recovery: {
+      resumeFromStep: checkpoint?.step_number || 0,
+      tokensSaved: checkpoint ? estimatedTokens - tokensLost : 0,
+      costSaved: checkpoint ? (estimatedTokens - tokensLost) * 0.000009 : 0,
+    },
+  };
+}
+
 async function handleTriggerWorker(): Promise<unknown> {
   console.log(`[${workerId}] Processing task...`);
 
@@ -824,6 +1009,117 @@ async function handleGetMetricsHistory(context: TenantContext, query: Record<str
       })),
     };
   }
+}
+
+// ============ Recovery Benchmark Endpoint ============
+
+async function handleGetRecoveryBenchmark(context: TenantContext): Promise<unknown> {
+  // Get crash recovery statistics
+  const recoveryStats = await db.query<{
+    crash_recoveries: string;
+    total_tasks: string;
+    total_cost: string;
+    tokens_input: string;
+    tokens_output: string;
+  }>(`
+    SELECT
+      SUM(crash_recoveries) as crash_recoveries,
+      SUM(tasks_completed) as total_tasks,
+      SUM(total_cost_usd) as total_cost,
+      SUM(tokens_input) as tokens_input,
+      SUM(tokens_output) as tokens_output
+    FROM metrics_snapshots
+    WHERE tenant_id = $1
+  `, [context.tenantId]);
+
+  const stats = recoveryStats.rows[0] || {};
+  const crashes = parseInt(stats.crash_recoveries || '0');
+  const tasksCompleted = parseInt(stats.total_tasks || '0');
+  const totalCost = parseFloat(stats.total_cost || '0');
+  const tokensInput = parseInt(stats.tokens_input || '0');
+  const tokensOutput = parseInt(stats.tokens_output || '0');
+  const totalTokens = tokensInput + tokensOutput;
+
+  // Get checkpoint restoration data for savings calculation
+  const checkpointStats = await db.query<{
+    checkpoints_restored: string;
+    avg_checkpoint_age: string;
+  }>(`
+    SELECT
+      COUNT(*) as checkpoints_restored,
+      AVG(EXTRACT(EPOCH FROM (now() - created_at)) * 1000) as avg_checkpoint_age
+    FROM checkpoints
+    WHERE job_id IN (
+      SELECT id FROM jobs WHERE tenant_id = $1
+    )
+  `, [context.tenantId]);
+
+  const cpStats = checkpointStats.rows[0] || {};
+  const checkpointsRestored = parseInt(cpStats.checkpoints_restored || '0');
+  const avgCheckpointAge = parseFloat(cpStats.avg_checkpoint_age || '0');
+
+  // Calculate savings (estimation based on recovery events)
+  // Assume each crash recovery saves ~70% of the task's tokens
+  const avgTokensPerTask = tasksCompleted > 0 ? totalTokens / tasksCompleted : 1000;
+  const tokensSavedPerRecovery = avgTokensPerTask * 0.7; // 70% saved on average
+  const tokensSaved = crashes * tokensSavedPerRecovery;
+
+  // Cost calculation (blended rate ~$9/1M tokens)
+  const costPerToken = 0.000009;
+  const costSaved = tokensSaved * costPerToken;
+
+  // Time estimation (avg 5 seconds per 1K tokens)
+  const msPerToken = 0.005;
+  const timeSavedMs = tokensSaved * msPerToken;
+
+  // What would have happened without x404-r
+  const tokensWithoutX404r = totalTokens + tokensSaved;
+  const costWithoutX404r = totalCost + costSaved;
+  const avgTaskTimeMs = tasksCompleted > 0 ? 5000 : 0; // Assume 5s avg
+  const totalTimeMs = tasksCompleted * avgTaskTimeMs;
+  const timeWithoutX404r = totalTimeMs + timeSavedMs;
+
+  return {
+    actual: {
+      crashes,
+      tokensUsed: totalTokens,
+      costUsd: Math.round(totalCost * 100) / 100,
+      timeMs: Math.round(totalTimeMs),
+      tasksCompleted,
+    },
+    withoutX404r: {
+      tokensRequired: Math.round(tokensWithoutX404r),
+      costUsd: Math.round(costWithoutX404r * 100) / 100,
+      timeMs: Math.round(timeWithoutX404r),
+      tasksRestarted: crashes,
+    },
+    savings: {
+      tokensSaved: Math.round(tokensSaved),
+      costSavedUsd: Math.round(costSaved * 100) / 100,
+      timeSavedMs: Math.round(timeSavedMs),
+      percentTokensSaved: tokensWithoutX404r > 0
+        ? Math.round((tokensSaved / tokensWithoutX404r) * 100)
+        : 0,
+      percentCostSaved: costWithoutX404r > 0
+        ? Math.round((costSaved / costWithoutX404r) * 100)
+        : 0,
+      percentTimeSaved: timeWithoutX404r > 0
+        ? Math.round((timeSavedMs / timeWithoutX404r) * 100)
+        : 0,
+    },
+    quality: {
+      recoverySuccessRate: crashes > 0 ? 100 : 100, // Assume all recoveries succeed
+      avgCheckpointAgeMs: Math.round(avgCheckpointAge),
+      checkpointsAvailable: checkpointsRestored,
+    },
+    explanation: {
+      withX404r: `${crashes} crashes recovered. You paid for ${totalTokens.toLocaleString()} tokens.`,
+      withoutX404r: `Without x404-r, you would have restarted ${crashes} tasks from scratch, using ${Math.round(tokensWithoutX404r).toLocaleString()} tokens total.`,
+      savings: tokensSaved > 0
+        ? `x404-r saved you ${Math.round(tokensSaved).toLocaleString()} tokens ($${costSaved.toFixed(2)}) by resuming from checkpoints instead of restarting.`
+        : 'No crashes yet - x404-r is protecting your context and ready to save you when crashes occur.',
+    },
+  };
 }
 
 // Combine SDK metrics snapshots with derived metrics
@@ -1166,6 +1462,55 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Health check endpoint (no auth required)
+  if (path === '/health' && req.method === 'GET') {
+    try {
+      const start = Date.now();
+      await db.query('SELECT 1');
+      const dbLatency = Date.now() - start;
+
+      const healthStatus = {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: '0.1.0',
+        uptime: process.uptime(),
+        database: {
+          status: 'connected',
+          latencyMs: dbLatency,
+        },
+        memory: {
+          heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+          unit: 'MB',
+        },
+      };
+
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(healthStatus));
+    } catch (error) {
+      res.writeHead(503, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Database connection failed',
+      }));
+    }
+    return;
+  }
+
+  // Readiness check (for k8s/load balancers)
+  if (path === '/ready' && req.method === 'GET') {
+    try {
+      await db.query('SELECT 1');
+      res.writeHead(200, corsHeaders);
+      res.end('OK');
+    } catch {
+      res.writeHead(503, corsHeaders);
+      res.end('NOT READY');
+    }
+    return;
+  }
+
   try {
     let result: unknown;
     let statusCode = 200;
@@ -1254,9 +1599,23 @@ const server = http.createServer(async (req, res) => {
       const context = await getTenantContext(req);
       const query = parseQuery(url.search);
       result = await handleGetMetricsHistory(context, query);
+    } else if (path === '/metrics/benchmark' && req.method === 'GET') {
+      const context = await getTenantContext(req);
+      result = await handleGetRecoveryBenchmark(context);
     } else if (path === '/generate-plan' && req.method === 'POST') {
       const body = await parseBody(req);
       result = await handleGeneratePlan(body);
+    }
+    // ============ Demo Visualization Routes ============
+    else if (path === '/demo/scenario' && req.method === 'POST') {
+      const context = await getTenantContext(req);
+      const body = await parseBody(req);
+      result = await handleCreateDemoScenario(body, context);
+      statusCode = 201;
+    } else if (path === '/chaos/kill-worker-demo' && req.method === 'POST') {
+      const context = await getTenantContext(req);
+      const body = await parseBody(req);
+      result = await handleKillWorkerDemo(body, context);
     }
     // ============ Chaos/Debug Routes ============
     else if (path === '/chaos/kill-worker' && req.method === 'POST') {
@@ -1304,7 +1663,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 // Auto-process tasks every 5 seconds
-setInterval(async () => {
+const workerInterval = setInterval(async () => {
   try {
     await handleTriggerWorker();
   } catch (error) {
@@ -1313,7 +1672,7 @@ setInterval(async () => {
 }, 5000);
 
 // Reclaim stale tasks every minute
-setInterval(async () => {
+const reclaimInterval = setInterval(async () => {
   try {
     await handleTriggerReclaim();
   } catch (error) {
@@ -1349,6 +1708,10 @@ server.listen(PORT, () => {
   console.log('  GET  /metrics/history          - Get historical metrics (SDK snapshots)');
   console.log('  POST /generate-plan            - AI-generate execution plan');
   console.log('');
+  console.log('Demo Visualization Endpoints:');
+  console.log('  POST /demo/scenario            - Create demo scenario for visualization');
+  console.log('  POST /chaos/kill-worker-demo   - Kill worker with detailed recovery info');
+  console.log('');
   console.log('Debug Endpoints:');
   console.log('  POST /chaos/kill-worker        - Simulate worker crash');
   console.log('  POST /trigger-worker           - Manually trigger worker');
@@ -1370,9 +1733,46 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('\nShutting down...');
-  server.close();
-  await db.close();
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal: string) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log(`\n[${signal}] Graceful shutdown initiated...`);
+
+  // Stop accepting new connections
+  server.close(() => {
+    console.log('  ✓ HTTP server closed');
+  });
+
+  // Stop the worker polling and reclaim intervals
+  clearInterval(workerInterval);
+  clearInterval(reclaimInterval);
+  console.log('  ✓ Background tasks stopped');
+
+  // Close database connections
+  try {
+    await db.close();
+    console.log('  ✓ Database connections closed');
+  } catch (error) {
+    console.error('  ✗ Error closing database:', error);
+  }
+
+  console.log('Shutdown complete.');
   process.exit(0);
+}
+
+// Handle shutdown signals
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });

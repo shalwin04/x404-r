@@ -137,7 +137,14 @@ export interface JSONSchema {
 
 // ============ Client Configuration ============
 
-export interface AgentDBConfig {
+/**
+ * Embedded mode configuration
+ * Direct connection to CockroachDB, run workers locally
+ */
+export interface EmbeddedConfig {
+  /** Mode identifier */
+  mode?: 'embedded';
+
   /** CockroachDB connection string */
   connectionString: string;
 
@@ -149,6 +156,49 @@ export interface AgentDBConfig {
 
   /** Enable debug logging */
   debug?: boolean;
+}
+
+/**
+ * Cloud mode configuration
+ * Connect to hosted x404-r API, workers run on Lambda
+ */
+export interface CloudConfig {
+  /** Mode identifier */
+  mode: 'cloud';
+
+  /** x404-r API key (get from dashboard) */
+  apiKey: string;
+
+  /** API base URL (defaults to https://api.x404r.io) */
+  baseUrl?: string;
+
+  /** Enable debug logging */
+  debug?: boolean;
+}
+
+/**
+ * Combined configuration type
+ */
+export type X404rConfig = EmbeddedConfig | CloudConfig;
+
+/**
+ * Legacy config type for backwards compatibility
+ * @deprecated Use X404rConfig instead
+ */
+export type AgentDBConfig = EmbeddedConfig;
+
+/**
+ * Type guard for embedded mode
+ */
+export function isEmbeddedConfig(config: X404rConfig): config is EmbeddedConfig {
+  return config.mode !== 'cloud';
+}
+
+/**
+ * Type guard for cloud mode
+ */
+export function isCloudConfig(config: X404rConfig): config is CloudConfig {
+  return config.mode === 'cloud';
 }
 
 export interface AIConfig {

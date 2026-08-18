@@ -93,6 +93,43 @@ export interface MemoryMetrics {
 }
 
 /**
+ * Recovery Benchmark - The value x404-r provides
+ * Shows "with x404-r" vs "without x404-r" comparison
+ */
+export interface RecoveryBenchmark {
+  // What actually happened (with x404-r)
+  actual: {
+    crashes: number;
+    tokensUsed: number;
+    costUsd: number;
+    timeMs: number;
+    tasksCompleted: number;
+  };
+  // What would have happened without x404-r (counterfactual)
+  withoutX404r: {
+    tokensRequired: number;  // All tokens from scratch
+    costUsd: number;         // Full cost to re-run
+    timeMs: number;          // Full time to re-run
+    tasksRestarted: number;  // Tasks that would restart from 0
+  };
+  // The savings x404-r provided
+  savings: {
+    tokensSaved: number;
+    costSavedUsd: number;
+    timeSavedMs: number;
+    percentTokensSaved: number;
+    percentCostSaved: number;
+    percentTimeSaved: number;
+  };
+  // Recovery quality metrics
+  quality: {
+    recoverySuccessRate: number;  // % of crashes successfully recovered
+    avgCheckpointAge: number;     // How recent were checkpoints (ms)
+    avgRecoveryTime: number;      // Time to recover (ms)
+  };
+}
+
+/**
  * Histogram for tracking distributions
  */
 export class Histogram {
@@ -176,6 +213,18 @@ export class MetricsCollector {
   private lastFailureTime: number = 0;
   private failureCount: number = 0;
   private recoveryTimes: number[] = [];
+
+  // Recovery benchmark tracking
+  private recoveryEvents: Array<{
+    taskId: string;
+    tokensBeforeCrash: number;
+    tokensAfterRecovery: number;
+    timeBeforeCrash: number;
+    checkpointAgeMs: number;
+    recoveredAt: number;
+  }> = [];
+  private taskTokenUsage: Map<string, number> = new Map();
+  private taskTimeUsage: Map<string, number> = new Map();
 
   // Database persistence
   private dbConfig: MetricsDatabaseConfig | null = null;
@@ -323,6 +372,52 @@ export class MetricsCollector {
     this.increment('tasks.recovered', 1, { taskType });
     this.recordHistogram('recovery.time', recoveryTimeMs);
     this.recoveryTimes.push(recoveryTimeMs);
+  }
+
+  /**
+   * Record a crash recovery event with full context
+   * This is used to calculate the "what if" benchmark
+   */
+  recordCrashRecovery(event: {
+    taskId: string;
+    tokensUsedBeforeCrash: number;
+    tokensUsedAfterRecovery: number;
+    timeSpentBeforeCrashMs: number;
+    checkpointAgeMs: number;
+    recoveryTimeMs: number;
+  }): void {
+    this.recoveryEvents.push({
+      taskId: event.taskId,
+      tokensBeforeCrash: event.tokensUsedBeforeCrash,
+      tokensAfterRecovery: event.tokensUsedAfterRecovery,
+      timeBeforeCrash: event.timeSpentBeforeCrashMs,
+      checkpointAgeMs: event.checkpointAgeMs,
+      recoveredAt: Date.now(),
+    });
+
+    // Update counters
+    this.increment('recovery.tokens_saved', event.tokensUsedBeforeCrash);
+    this.increment('recovery.tokens_used', event.tokensUsedAfterRecovery);
+    this.recordHistogram('recovery.checkpoint_age', event.checkpointAgeMs);
+
+    // Track recovery time
+    this.taskRecovered(event.taskId, 'recovered', event.recoveryTimeMs);
+  }
+
+  /**
+   * Track token usage for a task (used for benchmark calculation)
+   */
+  trackTaskTokens(taskId: string, tokens: number): void {
+    const current = this.taskTokenUsage.get(taskId) || 0;
+    this.taskTokenUsage.set(taskId, current + tokens);
+  }
+
+  /**
+   * Track time usage for a task (used for benchmark calculation)
+   */
+  trackTaskTime(taskId: string, timeMs: number): void {
+    const current = this.taskTimeUsage.get(taskId) || 0;
+    this.taskTimeUsage.set(taskId, current + timeMs);
   }
 
   // ============ Checkpoint Lifecycle ============
@@ -474,6 +569,90 @@ export class MetricsCollector {
    */
   getRecentEvents(limit = 100): MetricEvent[] {
     return this.events.slice(-limit);
+  }
+
+  /**
+   * Get the recovery benchmark - the value x404-r provides
+   * This shows "with x404-r" vs "without x404-r" comparison
+   */
+  getRecoveryBenchmark(): RecoveryBenchmark {
+    const tokensInput = this.counters.get('ai.tokens.input') || 0;
+    const tokensOutput = this.counters.get('ai.tokens.output') || 0;
+    const totalTokens = tokensInput + tokensOutput;
+    const totalCost = (this.counters.get('ai.cost.total') || 0) / 10000;
+    const tasksCompleted = this.counters.get('tasks.completed') || 0;
+    const crashes = this.counters.get('tasks.recovered') || 0;
+
+    // Calculate tokens and time saved from recovery events
+    let tokensSavedFromRecovery = 0;
+    let timeSavedFromRecovery = 0;
+    let totalCheckpointAge = 0;
+
+    for (const event of this.recoveryEvents) {
+      // Without x404-r, we'd have to re-run all tokens before crash
+      tokensSavedFromRecovery += event.tokensBeforeCrash;
+      timeSavedFromRecovery += event.timeBeforeCrash;
+      totalCheckpointAge += event.checkpointAgeMs;
+    }
+
+    // Cost calculation (using approximate pricing)
+    // Claude: ~$3/1M input, ~$15/1M output (Sonnet pricing)
+    const avgCostPerToken = 0.000009; // ~$9 per 1M tokens blended
+    const costSaved = tokensSavedFromRecovery * avgCostPerToken;
+
+    // What would have happened without x404-r
+    const tokensWithoutX404r = totalTokens + tokensSavedFromRecovery;
+    const costWithoutX404r = totalCost + costSaved;
+
+    // Time estimation: assume average task latency from histogram
+    const taskLatency = this.histograms.get('task.latency');
+    const avgTaskTimeMs = taskLatency?.average() || 5000;
+    const totalTimeMs = tasksCompleted * avgTaskTimeMs;
+    const timeWithoutX404r = totalTimeMs + timeSavedFromRecovery;
+
+    // Recovery quality
+    const recoveryTime = this.histograms.get('recovery.time');
+    const checkpointAgeHist = this.histograms.get('recovery.checkpoint_age');
+    const failedRecoveries = this.counters.get('recovery.failed') || 0;
+    const successfulRecoveries = crashes;
+    const totalRecoveryAttempts = successfulRecoveries + failedRecoveries;
+
+    return {
+      actual: {
+        crashes,
+        tokensUsed: totalTokens,
+        costUsd: totalCost,
+        timeMs: totalTimeMs,
+        tasksCompleted,
+      },
+      withoutX404r: {
+        tokensRequired: tokensWithoutX404r,
+        costUsd: costWithoutX404r,
+        timeMs: timeWithoutX404r,
+        tasksRestarted: crashes, // Each crash = full restart
+      },
+      savings: {
+        tokensSaved: tokensSavedFromRecovery,
+        costSavedUsd: costSaved,
+        timeSavedMs: timeSavedFromRecovery,
+        percentTokensSaved: tokensWithoutX404r > 0
+          ? (tokensSavedFromRecovery / tokensWithoutX404r) * 100
+          : 0,
+        percentCostSaved: costWithoutX404r > 0
+          ? (costSaved / costWithoutX404r) * 100
+          : 0,
+        percentTimeSaved: timeWithoutX404r > 0
+          ? (timeSavedFromRecovery / timeWithoutX404r) * 100
+          : 0,
+      },
+      quality: {
+        recoverySuccessRate: totalRecoveryAttempts > 0
+          ? (successfulRecoveries / totalRecoveryAttempts) * 100
+          : 100,
+        avgCheckpointAge: checkpointAgeHist?.average() || 0,
+        avgRecoveryTime: recoveryTime?.average() || 0,
+      },
+    };
   }
 
   /**

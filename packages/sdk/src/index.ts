@@ -56,7 +56,12 @@
  */
 
 // Main client
-export { AgentDB, AgentDB as x404r } from './client.js';
+export { AgentDB, x404r } from './client.js';
+
+// Backend abstraction
+export type { Backend } from './backend/index.js';
+export { EmbeddedBackend, CloudBackend, isEmbeddedBackend } from './backend/index.js';
+export type { EmbeddedBackendConfig, CloudBackendConfig } from './backend/index.js';
 
 // Workflow builder
 export { WorkflowBuilder } from './workflow.js';
@@ -133,8 +138,11 @@ export type {
   CostEstimate,
   GenerateResult,
 
-  // Config types
-  AgentDBConfig,
+  // Config types - NEW dual mode
+  X404rConfig,
+  EmbeddedConfig,
+  CloudConfig,
+  AgentDBConfig, // deprecated alias
   WorkerConfig,
 
   // Event types
@@ -145,3 +153,6 @@ export type {
   RunOptions,
   RunResult,
 } from './types.js';
+
+// Type guards
+export { isEmbeddedConfig, isCloudConfig } from './types.js';

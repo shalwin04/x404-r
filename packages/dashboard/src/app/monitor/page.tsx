@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
 import * as api from '@/lib/api';
+import SavingsDashboard from '@/components/SavingsDashboard';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -216,8 +217,8 @@ export default function MonitorPage() {
     { refreshInterval: 5000 }
   );
 
-  // Mock metrics if API not available
-  const metrics: MetricsSummary = metricsData?.metrics || {
+  // Memoize default metrics to prevent infinite re-renders
+  const defaultMetrics: MetricsSummary = useMemo(() => ({
     execution: {
       tasksTotal: 156,
       tasksCompleted: 142,
@@ -260,7 +261,10 @@ export default function MonitorPage() {
       avgTokensPerGeneration: 406,
       contextUtilization: 0.35,
     },
-  };
+  }), []);
+
+  // Use API data or fallback to memoized defaults
+  const metrics: MetricsSummary = metricsData?.metrics || defaultMetrics;
 
   // Update metrics history
   useEffect(() => {
@@ -643,6 +647,10 @@ export default function MonitorPage() {
               <MetricCard title="MTTR" value={metrics.reliability.mttrSeconds.toFixed(1)} unit="sec" color="var(--accent)" />
               <MetricCard title="Crash Recoveries" value={metrics.reliability.crashRecoveries} color="var(--success)" />
             </div>
+
+            {/* Recovery Value Dashboard */}
+            <SavingsDashboard />
+
             <div className="p-6 rounded-xl" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
               <h3 className="text-sm font-medium mb-4">Checkpoint Performance</h3>
               <div className="flex items-center justify-between">

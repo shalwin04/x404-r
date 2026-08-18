@@ -280,3 +280,305 @@ input:focus, select:focus, textarea:focus {
     -webkit-backdrop-filter: none;
   }
 }
+
+/* ============================================
+   Demo Visualization Animations
+   ============================================ */
+
+/* Crash glitch effect */
+@keyframes crash-glitch {
+  0% {
+    transform: translate(0);
+    filter: hue-rotate(0deg);
+  }
+  10% {
+    transform: translate(-2px, 1px);
+    filter: hue-rotate(90deg);
+  }
+  20% {
+    transform: translate(2px, -1px);
+    filter: hue-rotate(180deg);
+  }
+  30% {
+    transform: translate(-1px, 2px);
+    filter: hue-rotate(270deg);
+  }
+  40% {
+    transform: translate(1px, -2px);
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    transform: translate(-2px, -1px) skewX(3deg);
+    filter: hue-rotate(90deg) saturate(2);
+  }
+  60% {
+    transform: translate(2px, 1px) skewX(-3deg);
+    filter: hue-rotate(180deg) saturate(2);
+  }
+  70% {
+    transform: translate(-1px, -1px);
+    filter: hue-rotate(270deg);
+  }
+  80% {
+    transform: translate(1px, 1px);
+    filter: hue-rotate(0deg);
+  }
+  90% {
+    transform: translate(0) scale(0.98);
+    filter: brightness(1.5);
+  }
+  100% {
+    transform: translate(0) scale(1);
+    filter: none;
+  }
+}
+
+/* Recovery pulse ring */
+@keyframes recovery-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  50% {
+    transform: scale(1);
+    opacity: 0.8;
+    box-shadow: 0 0 0 15px rgba(34, 197, 94, 0);
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+/* Checkpoint save flash */
+@keyframes checkpoint-flash {
+  0% {
+    background: rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  25% {
+    background: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px 10px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    background: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 30px 15px rgba(59, 130, 246, 0.2);
+  }
+  100% {
+    background: rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* Kill button pulse */
+@keyframes kill-button-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px 8px rgba(239, 68, 68, 0.3);
+  }
+}
+
+/* Ghost fade for lost data */
+@keyframes ghost-fade {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+
+/* Node shake on crash */
+@keyframes node-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+/* Smooth fade in up for narrative text */
+@keyframes narrative-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Progress bar fill animation */
+@keyframes progress-fill {
+  from {
+    width: 0%;
+  }
+}
+
+/* Comparison bar animation */
+@keyframes comparison-grow {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  to {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+/* Demo utility classes */
+.animate-crash-glitch {
+  animation: crash-glitch 500ms ease-in-out;
+}
+
+.animate-recovery-pulse {
+  animation: recovery-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-checkpoint-flash {
+  animation: checkpoint-flash 800ms ease-out;
+}
+
+.animate-kill-pulse {
+  animation: kill-button-pulse 2s ease-in-out infinite;
+}
+
+.animate-ghost-fade {
+  animation: ghost-fade 1s ease-in-out forwards;
+}
+
+.animate-node-shake {
+  animation: node-shake 400ms ease-in-out;
+}
+
+.animate-narrative-enter {
+  animation: narrative-enter 400ms var(--ease-out);
+}
+
+.animate-progress-fill {
+  animation: progress-fill 1s var(--ease-out);
+}
+
+.animate-comparison-grow {
+  animation: comparison-grow 800ms var(--ease-out);
+}
+
+/* Ghost mode overlay styles */
+.ghost-overlay {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(239, 68, 68, 0.05) 10px,
+    rgba(239, 68, 68, 0.05) 20px
+  );
+  pointer-events: none;
+}
+
+.ghost-strikethrough {
+  position: relative;
+}
+
+.ghost-strikethrough::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  background: var(--error);
+  transform: translateY(-50%);
+}
+
+/* Demo card hover effect */
+.demo-card {
+  transition: all 200ms var(--ease-out);
+}
+
+.demo-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.5);
+}
+
+.demo-card:active {
+  transform: translateY(-2px);
+}
+
+/* Timeline scrubber styles */
+.timeline-track {
+  position: relative;
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.timeline-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 50ms linear;
+}
+
+.timeline-playhead {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+  transition: transform 100ms var(--ease-out);
+}
+
+.timeline-playhead:hover {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.timeline-playhead:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.timeline-marker {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 150ms var(--ease-out);
+}
+
+.timeline-marker:hover {
+  transform: translate(-50%, -50%) scale(1.4);
+  background: white;
+}
+
+.timeline-marker.active {
+  background: white;
+  box-shadow: 0 0 0 3px var(--accent);
+}

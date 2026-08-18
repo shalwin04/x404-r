@@ -19,13 +19,66 @@ x404-r fixes this. State lives in CockroachDB, not memory. Workers are stateless
 ## Features
 
 - **Crash-Proof Execution**: Checkpoint state at any point. Resume exactly where you left off.
+- **Dual Mode**: Run embedded (your DB) or cloud (our Lambda workers).
 - **DAG Workflows**: Define complex workflows with step dependencies. Parallel execution when possible.
 - **Priority Scheduling**: Enterprise tenants processed first via `FOR UPDATE SKIP LOCKED`.
 - **AI Integration**: Built-in support for Gemini, OpenAI, and Anthropic.
 - **Memory & Learning**: Query embeddings of past executions for context.
 - **Multi-Tenant**: Full tenant isolation with usage tracking.
 
-## Quick Start
+## Two Modes
+
+### Mode A: Embedded (Self-Hosted)
+
+Run everything on your infrastructure. Direct CockroachDB connection, local workers.
+
+```typescript
+import { x404r } from '@x404-r/sdk';
+
+const runtime = await new x404r({
+  mode: 'embedded',  // optional, this is the default
+  connectionString: process.env.DATABASE_URL,
+  ai: { provider: 'gemini', apiKey: process.env.GEMINI_API_KEY },
+}).ready();
+
+// Define workflows with handlers
+const workflow = runtime.workflow('my-task', {
+  steps: [{ name: 'process', handler: async (ctx) => { ... } }]
+});
+
+// Run your own workers
+const worker = runtime.worker({ concurrency: 5 });
+worker.register(workflow);
+await worker.start();
+```
+
+### Mode B: Cloud (Hosted)
+
+Zero infrastructure. Just submit jobs, Lambda workers execute them.
+
+```typescript
+import { x404r } from '@x404-r/sdk';
+
+const runtime = new x404r({
+  mode: 'cloud',
+  apiKey: 'x404r_live_...',  // Get from dashboard
+});
+
+// Submit job - Lambda executes it
+const job = await runtime.submit('my-task', { input: 'data' });
+
+// Check status
+const status = await runtime.status(job.workflowId);
+
+// Wait for completion
+const result = await runtime.wait(job.workflowId);
+
+// Time travel - replay from checkpoint
+const checkpoints = await runtime.checkpoints(job.workflowId);
+await runtime.replay(job.workflowId, checkpoints[0].id);
+```
+
+## Quick Start (Embedded Mode)
 
 ```typescript
 import { x404r } from '@x404-r/sdk';
@@ -277,6 +330,56 @@ npx tsx examples/code-review-agent.ts
 ```bash
 DATABASE_URL=postgresql://user:pass@host:26257/db?sslmode=verify-full
 GEMINI_API_KEY=your-gemini-key
+```
+
+## Recovery Metrics & Benchmarking
+
+x404-r tracks the value it provides. See exactly what crashes cost you - and what you saved.
+
+```typescript
+import { MetricsCollector } from '@x404-r/sdk/metrics';
+
+const metrics = new MetricsCollector();
+
+// After running workflows, check your savings
+const summary = metrics.getSummary();
+
+console.log({
+  // How many times x404-r saved you from starting over
+  crashesRecovered: summary.reliability.crashRecoveries,
+
+  // Tokens you didn't have to re-generate
+  tokensSaved: summary.cost.tokensSaved,
+
+  // Money saved by not re-running crashed tasks
+  costSaved: summary.cost.savedByRecoveryUsd,
+
+  // Recovery success rate
+  checkpointHitRate: summary.reliability.checkpointHitRate,
+});
+```
+
+### Without x404-r vs With x404-r
+
+| Scenario | Without x404-r | With x404-r |
+|----------|---------------|-------------|
+| Worker crashes at step 8/10 | Restart from step 1 | Resume from step 8 |
+| Tokens re-used | 0 (all lost) | ~80% preserved |
+| Cost on crash | Full re-run ($$$) | Only remaining steps |
+| Context | Lost forever | Saved in CockroachDB |
+
+### Persist Metrics to Dashboard
+
+```typescript
+// Enable database persistence for dashboard visibility
+metrics.setDatabase({
+  pool: dbPool,
+  tenantId: 'your-tenant-id',
+  flushIntervalMs: 30000, // Flush every 30s
+});
+
+// View in dashboard at http://localhost:3000
+// See real-time: crashes recovered, tokens saved, cost savings
 ```
 
 ## License

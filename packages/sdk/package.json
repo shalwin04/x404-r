@@ -3,12 +3,43 @@
   "version": "0.1.0",
   "description": "The runtime where context is never lost - crash-proof AI agents on CockroachDB",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./metrics": {
+      "types": "./dist/metrics.d.ts",
+      "import": "./dist/metrics.js"
+    },
+    "./chaos": {
+      "types": "./dist/chaos.d.ts",
+      "import": "./dist/chaos.js"
+    },
+    "./durable": {
+      "types": "./dist/durable.d.ts",
+      "import": "./dist/durable.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "dev": "tsc --watch",
-    "test": "vitest"
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run test:run && npm run build",
+    "clean": "rm -rf dist node_modules"
   },
   "keywords": [
     "ai",
@@ -16,10 +47,26 @@
     "workflow",
     "cockroachdb",
     "distributed",
-    "crash-proof"
+    "crash-proof",
+    "durable-execution",
+    "ai-agents",
+    "llm",
+    "checkpoint",
+    "fault-tolerant"
   ],
-  "author": "",
+  "author": "x404-r team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/x404-r/sdk.git"
+  },
+  "homepage": "https://x404-r.dev",
+  "bugs": {
+    "url": "https://github.com/x404-r/sdk/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "pg": "^8.11.3"

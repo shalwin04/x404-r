@@ -14,8 +14,16 @@
     "declarationMap": true,
     "sourceMap": true,
     "noEmit": false,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/__tests__", "**/*.test.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/__tests__/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
 }

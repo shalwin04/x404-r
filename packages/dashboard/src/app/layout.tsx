@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description: "The runtime where AI agent context is never lost. Crash-proof execution on CockroachDB.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"

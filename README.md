@@ -49,7 +49,7 @@ Context? Always found. Progress? Never lost. Agents? Crash-proof.
 | Requirement | Implementation |
 |-------------|----------------|
 | **CockroachDB (2+ tools)** | ✅ FOR UPDATE SKIP LOCKED, Distributed Transactions, Vector Storage |
-| **AWS (1+ services)** | ✅ Lambda (handlers ready), Bedrock (AI provider) |
+| **AWS (1+ services)** | ✅ Lambda (workers), API Gateway, EventBridge, Secrets Manager, Bedrock (optional) |
 
 ## Architecture
 
